@@ -2,16 +2,22 @@ CPP = c++
 
 CPPFLAGS = -Wall -Werror -Wextra -std=c++98 -fsanitize=address -g3
 
-SRCS = webserv.cpp
+SRCSDIR = ./srcs
 
-OBJS = $(SRCS:.cpp=.o)
+SRC_FILES = config_parser.cpp webserv.cpp
+
+SRCS = $(wildcard $(SRCSDIR)/*.cpp)
+
+OBJSDIR = ./objs
+
+OBJS = $(addprefix $(OBJSDIR)/, $(SRC_FILES:.cpp=.o))
 
 NAME = HyperVaulted
 
-%.o : %.cpp
-	$(CPP) $(CPPFLAGS) -o $(OBJS) -c $(SRCS)
-
 all : $(NAME)
+
+$(OBJSDIR)/%.o : $(SRCSDIR)/%.cpp
+	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 $(NAME) : $(OBJS)
 	$(CPP) $(CPPFLAGS) $(SRCS) -o $(NAME)
@@ -24,4 +30,4 @@ fclean : clean
 
 re : fclean all
 
-.PHONY : clean fclean re
+.PHONY : all clean fclean re
