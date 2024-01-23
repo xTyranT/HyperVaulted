@@ -22,10 +22,13 @@ UTILS_OBJS = $(addprefix $(OBJSDIR)/, $(UTIL_FILES:.cpp=.o))
 
 all : $(NAME)
 
-$(OBJSDIR)/%.o : $(SRCSDIR)/%.cpp
+$(OBJSDIR):
+	mkdir -p $(OBJSDIR)
+
+$(OBJSDIR)/%.o : $(SRCSDIR)/%.cpp | $(OBJSDIR)
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
-$(OBJSDIR)/%.o : $(UTILSDIR)/%.cpp
+$(OBJSDIR)/%.o : $(UTILSDIR)/%.cpp | $(OBJSDIR)
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 $(NAME) : $(OBJS) $(UTILS_OBJS)
@@ -36,6 +39,7 @@ clean :
 
 fclean : clean
 	rm -rf $(NAME)
+	rm -rf $(OBJSDIR)
 
 re : fclean all
 
