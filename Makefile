@@ -4,7 +4,7 @@ CPPFLAGS = -Wall -Werror -Wextra -std=c++98 -fsanitize=address -g3
 
 SRCSDIR = ./srcs
 
-SRC_FILES = config_parser.cpp webserv.cpp
+SRC_FILES = Server.cpp webserv.cpp stringManipulators.cpp
 
 SRCS = $(wildcard $(SRCSDIR)/*.cpp)
 

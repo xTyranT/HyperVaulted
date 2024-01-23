@@ -12,48 +12,22 @@
 #include <stack>
 #include <vector>
 #include <map>
+#include <deque>
+#include <list>
 
-#define PORT "port"
+#define SERVER "server"
+#define PORT "listen"
 #define HOST "host"
 #define ROOT "root"
 #define INDEX "index"
-#define SRVNAMES "server_name"
-#define ERRPAGES "error_pages"
+#define SRVNAMES "server_names"
+#define ERRPAGES "error_page"
 #define MAXBDSIZE "max_body_size"
 #define LOCATION "location"
-
-enum typeCode
-{
-    _int,
-    _string,
-    _vector,
-    _map,
-    _long,
-    _l_config,
-    _none
-};
-
-typedef struct l_config
-{
-    std::map<std::string, void*> methods;     // std::vector<std::string>
-    std::map<std::string, void*> root;         // std::string
-    std::map<std::string, void*> indexes;     // std::vector<std::string>
-    std::map<std::string, void*> autoIndex;    // bool
-    std::map<std::string, void*> upload;       // bool
-    std::map<std::string, void*> cgi;          // bool
-    std::map<std::string, void*> uploadPath;   // std::string
-    std::map<std::string, void*> cgiPaths;    // std::map<std::string, std::string>
-} l_config;
-
-typedef struct s_config
-{
-    std::string server;
-    std::map<std::string, void*> port;         // int
-    std::map<std::string, void*> host;         // std::string
-    std::map<std::string, void*> root;         // std::string
-    std::map<std::string, void*> indexes;     // std::vector<std::string>
-    std::map<std::string, void*> srvNames;    // std::vector<std::string>
-    std::map<std::string, void*> errPages;    // std::map<int, std::string>
-    std::map<std::string, void*> maxBodySize;  // long
-    std::map<std::string, void*> location;     // l_config
-} s_config;
+#define METHODS "methods"
+#define AUTOINDEX "autoindex"
+#define UPLOAD "upload"
+#define CGI "cgi"
+#define UPLOADPATH "upload_path"
+#define CGIPATH "cgi_path"
+#define RETURN_ "return"
