@@ -1,7 +1,6 @@
 #pragma once
 
 #include "webserv.hpp"
-#include "stringManipulators.hpp"
 
 class Location
 {
@@ -13,6 +12,7 @@ class Location
         bool autoIndex;
         bool upload;
         bool cgi;
+        bool dirListing;
         std::string uploadPath;
         std::vector<std::string> cgiPaths;
         std::map<int, std::string> ret;
@@ -35,8 +35,12 @@ class Server
         std::vector<Location> location;
         std::vector<Location>::iterator l_i;
         Server(void);
-        void printConfigurationFile(void);
+        void defaultErrorPages(void);
+        void checkNecessaryAttributes(void);
+        void printServerAttributes(void);
         void checkAndStoreServerAttributes(std::vector<std::string> attr, std::ifstream& file);
         void serverBlock(std::ifstream& file);
         ~Server(void);
 };
+
+std::vector<Server> getAvailableServers(std::ifstream& file);

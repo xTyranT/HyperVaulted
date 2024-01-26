@@ -1,6 +1,19 @@
 #pragma once
 
-#include "webserv.hpp"
+#include <iostream>
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <string>
+#include <cstdio>
+#include <fstream>
+#include <sstream>
+#include <typeinfo> 
+#include <stack>
+#include <vector>
+#include <map>
+#include <deque>
+#include <list>
 
 void strtrim(std::string& s);
 bool skippableCharacterString(std::string line);

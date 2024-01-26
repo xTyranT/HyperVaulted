@@ -1,6 +1,5 @@
 
 #include "../includes/Server.hpp"
-#include "../includes/stringManipulators.hpp"
 
 int main(int argc, char** argv)
 {
@@ -10,12 +9,12 @@ int main(int argc, char** argv)
     {
         if (argc != 2)
             throw std::invalid_argument("./HyperVaulted <config_file>");
-        Server server;
         std::ifstream file(argv[1]);
         if (!file.is_open())
             throw std::invalid_argument("no such file or permission denied");
-        server.serverBlock(file);
-
+        std::vector<Server> sv = getAvailableServers(file);
+        for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
+            i->printServerAttributes();
     }
     catch(const std::exception& e)
     {

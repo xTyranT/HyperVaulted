@@ -1,8 +1,27 @@
 #include "../includes/Server.hpp"
 
+std::vector<Server> getAvailableServers(std::ifstream& file)
+{
+    std::vector<Server> srvs;
+    std::string line;
+
+    while(!file.eof())
+    {
+        Server sv;
+        sv.serverBlock(file);
+        if(file.eof())
+            return srvs;
+        srvs.push_back(sv);
+    }
+    return srvs;
+}
+
 Location::Location(void)
 {
-    
+    autoIndex = false;
+    upload = false;
+    cgi = false;
+    ret.insert(std::pair<int, std::string>(301, "https://google.com"));
 }
 
 void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
@@ -93,7 +112,7 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         ret.insert(tmp);
     }
     else
-        throw std::invalid_argument(*(attr.begin()) + " unknown variable");
+        throw std::invalid_argument(*(attr.begin()) + " unknown location variable");
 }
 
 Location::~Location(void)
@@ -103,7 +122,60 @@ Location::~Location(void)
 
 Server::Server(void)
 {
+    port = -1;
+    defaultErrorPages();
+    maxBodySize = 1000;
     l_i = location.begin();
+}
+
+void Server::defaultErrorPages(void)
+{
+    errPages.insert(std::pair<int, std::string>(400, "./errorPages/400.html"));
+    errPages.insert(std::pair<int, std::string>(403, "./errorPages/403.html"));
+    errPages.insert(std::pair<int, std::string>(404, "./errorPages/404.html"));
+    errPages.insert(std::pair<int, std::string>(405, "./errorPages/405.html"));
+    errPages.insert(std::pair<int, std::string>(500, "./errorPages/500.html"));
+    errPages.insert(std::pair<int, std::string>(501, "./errorPages/501.html"));
+}
+
+void Server::printServerAttributes(void)
+{
+    std::cout << "-------------SERVER VAR-------------\n";
+    std::cout << port << std::endl;
+    std::cout << host << std::endl;
+    std::cout << root << std::endl;
+    for(size_t i = 0; i < indexes.size(); i++)
+    {
+        std::cout << indexes[i] << " ";
+    }
+    std::cout << std::endl;
+    for(size_t i = 0; i < srvNames.size(); i++)
+        std::cout << srvNames[i] << " ";
+    std::cout << std::endl;
+    for(std::map<int, std::string>::iterator i = errPages.begin(); i != errPages.end(); i++)
+        std::cout << i->first << " | " << i->second << std::endl;
+    std::cout << maxBodySize << std::endl;
+    for(std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
+    {
+        std::cout << "-------------LOCATION VAR-------------\n";
+        std::cout << i->path << std::endl;
+        for(size_t j = 0; j < i->methods.size(); j++)
+            std::cout << i->methods[j] << " ";
+        std::cout << std::endl;
+        std::cout <<  i->root << std::endl;
+        for(size_t j = 0; j < i->indexes.size(); j++)
+            std::cout << i->indexes[j] << " ";
+        std::cout << std::endl;
+        std::cout << i->autoIndex << std::endl;
+        std::cout << i->upload << std::endl;
+        std::cout << i->cgi << std::endl;
+        std::cout << i->uploadPath << std::endl;
+        for(size_t j = 0; j < i->cgiPaths.size(); j++)
+            std::cout << i->cgiPaths[j] << " ";
+        std::cout << std::endl;
+        for(std::map<int, std::string>::iterator j = i->ret.begin(); j != i->ret.end(); j++)
+            std::cout << j->first << " | " << j->second << std::endl;
+    }
 }
 
 void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::ifstream& file)
@@ -113,7 +185,7 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
     {
         if(attr.size() != 2)
             throw std::invalid_argument("listen only on one port");
-        port = std::atoi((i + 1)->c_str());
+        port = std::atof((i + 1)->c_str());
         if (port < 1)
             throw std::invalid_argument("port cannot have a negative number");
     }
@@ -195,6 +267,9 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
         while(line != "}")
         {
             std::getline(file, line);
+            strtrim(line);
+            if(line.empty() || line.at(0) == '#')
+                continue;
             std::string temp = line;
             std::string checker = line;
             checker.erase(remove(checker.begin(), checker.end(), ' '), checker.end());
@@ -207,61 +282,40 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
         location.push_back(tmp);
     }
     else
-        throw std::invalid_argument(*(attr.begin()) + " unknown variable");
+        throw std::invalid_argument(*(attr.begin()) + " unknown server variable");
 }
 
-void Server::printConfigurationFile(void)
+void Server::checkNecessaryAttributes(void)
 {
-    std::cout << "-------------SERVER VAR-------------\n";
-    std::cout << port << std::endl;
-    std::cout << host << std::endl;
-    std::cout << root << std::endl;
-    for(size_t i = 0; i < indexes.size(); i++)
-    {
-        std::cout << indexes[i] << " ";
-    }
-    std::cout << std::endl;
-    for(size_t i = 0; i < srvNames.size(); i++)
-        std::cout << srvNames[i] << " ";
-    std::cout << std::endl;
-    for(std::map<int, std::string>::iterator i = errPages.begin(); i != errPages.end(); i++)
-        std::cout << i->first << " | " << i->second << std::endl;
-    std::cout << maxBodySize << std::endl;
-    for(std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
-    {
-        std::cout << "-------------LOCATION VAR-------------\n";
-        std::cout << i->path << std::endl;
-        for(size_t j = 0; j < i->methods.size(); j++)
-            std::cout << i->methods[j] << " ";
-        std::cout << std::endl;
-        std::cout <<  i->root << std::endl;
-        for(size_t j = 0; j < i->indexes.size(); j++)
-            std::cout << i->indexes[j] << " ";
-        std::cout << std::endl;
-        std::cout << i->autoIndex << std::endl;
-        std::cout << i->upload << std::endl;
-        std::cout << i->cgi << std::endl;
-        std::cout << i->uploadPath << std::endl;
-        for(size_t j = 0; j < i->cgiPaths.size(); j++)
-            std::cout << i->cgiPaths[j] << " ";
-        std::cout << std::endl;
-        for(std::map<int, std::string>::iterator j = i->ret.begin(); j != i->ret.end(); j++)
-            std::cout << j->first << " | " << j->second << std::endl;
-    }
+    if (port < 1)
+        throw std::invalid_argument("a listening port is necessary");
+    if(host.size() == 0)
+        throw std::invalid_argument("a host is necessary");
+    if(root.size() == 0)
+        throw std::invalid_argument("a root is necessary");
 }
 
 void Server::serverBlock(std::ifstream& file)
 {
     std::string line;
     std::stack<std::string> brackets;
+    std::string tmp;
+
     std::getline(file, line);
+    while (line.empty())
+    {
+        std::getline(file, line);
+        if(file.eof())
+            return;
+        strtrim(line);
+    }
     strtrim(line);
     if(line != SERVER)
         throw std::invalid_argument("config file requires a server block: \nserver\n{\n  ...\n}");
     while(std::getline(file, line))
     {
         strtrim(line);
-        if(line.empty())
+        if(line.empty() || line.at(0) == '#')
             continue;
         else if(line == "{")
             brackets.push(line);
@@ -270,6 +324,7 @@ void Server::serverBlock(std::ifstream& file)
             if(brackets.empty())
                 throw std::invalid_argument("closing none opened bracket");
             brackets.pop();
+            break;
         }
         else
         {
@@ -277,7 +332,9 @@ void Server::serverBlock(std::ifstream& file)
             checkAndStoreServerAttributes(vec, file);
         }
     }
-    printConfigurationFile();
+    if(!brackets.empty())
+        throw std::invalid_argument("opened bracket not closed");
+    checkNecessaryAttributes();
 }
 
 Server::~Server(void)
