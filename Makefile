@@ -1,6 +1,6 @@
 CPP = c++
 
-CPPFLAGS = -Wall -Werror -Wextra -std=c++98 -fsanitize=address -g3
+CPPFLAGS = -std=c++98 -fsanitize=address -g3 #-Wall -Werror -Wextra
 
 SRCSDIR = ./srcs
 
