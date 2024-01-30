@@ -85,7 +85,7 @@ void    multiplexing( std::vector<Server> & sv )
         if (wp == -1)
             throw std::invalid_argument(" wait ");
         
-        for ( int i = 0  ; i < wp ; i++)
+        for ( int i = 0  ; i < wp ; i++) 
         {
             int fd = events[i].data.fd;
             std::vector<int>::iterator it = std::find(sfds.begin() , sfds.end(), fd);
