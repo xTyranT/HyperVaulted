@@ -16,8 +16,8 @@ int main(int argc, char** argv)
         
         multiplexing( sv );
 
-        for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
-            i->printServerAttributes();
+        //for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
+          //  i->printServerAttributes();
     }
     catch(const std::exception& e)
     {

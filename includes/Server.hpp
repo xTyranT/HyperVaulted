@@ -12,12 +12,12 @@ class Location
         bool autoIndex;
         bool upload;
         bool cgi;
-        bool dirListing;
         std::string uploadPath;
         std::vector<std::string> cgiPaths;
         std::map<int, std::string> ret;
         Location(void);
         void checkAndStoreLocationAttributes(std::vector<std::string> attr);
+        void checkNecessaryAttributes(void);
         ~Location(void);
 
 };

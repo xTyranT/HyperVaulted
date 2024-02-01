@@ -115,6 +115,16 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         throw std::invalid_argument(*(attr.begin()) + " unknown location variable");
 }
 
+void Location::checkNecessaryAttributes(void)
+{
+    if(methods.size() == 0)
+        throw std::invalid_argument("methods must be specified with one of the following:   GET POST DELETE");
+    if(root.empty())
+        throw std::invalid_argument("location root must be specified");
+    if(uploadPath.empty())
+        throw std::invalid_argument("location upload_path must be specified");
+}
+
 Location::~Location(void)
 {
 
@@ -130,6 +140,7 @@ Server::Server(void)
 
 void Server::defaultErrorPages(void)
 {
+    // auto generate the error page
     errPages.insert(std::pair<int, std::string>(400, "./errorPages/400.html"));
     errPages.insert(std::pair<int, std::string>(403, "./errorPages/403.html"));
     errPages.insert(std::pair<int, std::string>(404, "./errorPages/404.html"));
@@ -289,10 +300,14 @@ void Server::checkNecessaryAttributes(void)
 {
     if (port < 1)
         throw std::invalid_argument("a listening port is necessary");
-    if(host.size() == 0)
-        throw std::invalid_argument("a host is necessary");
     if(root.size() == 0)
         throw std::invalid_argument("a root is necessary");
+    
+    if(location.size() > 0)
+    {
+        for(std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
+            i->checkNecessaryAttributes();
+    }
 }
 
 void Server::serverBlock(std::ifstream& file)
