@@ -91,7 +91,7 @@ void    multiplexing( std::vector<Server> & sv )
                 Clients[fd].requires.append(buff);
                 if ( Clients[fd].requires.find("\r\n\r\n") != std::string::npos )
                 {
-                    
+                    std::cout << Clients[fd].requires << std::endl;
                 }
             }
                 
