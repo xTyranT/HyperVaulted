@@ -1,13 +1,3 @@
-
-#include <iostream>
-#include <cstring>
-#include <sys/socket.h>
-#include <sys/epoll.h>
-#include <errno.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
 #define MAX_EVENTS 10
@@ -34,7 +24,6 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
 
 }
 
-
 void    multiplexing( std::vector<Server> & sv )
 {
     char buff[1024];
@@ -44,12 +33,13 @@ void    multiplexing( std::vector<Server> & sv )
 
     int efd = epoll_create1(0);
     if ( efd == -1 )
-        std::cout << "epoll_creat" << strerror(errno) << std::endl;
+        std::cout << "epoll_creat " << strerror(errno) << std::endl;
     for (size_t i = 0 ; i < sv.size() ; i++)
     {
         int sfd = socket(AF_INET, SOCK_STREAM, 0);
         if ( sfd == -1 )
             std::cout << "socket " << strerror(errno) << std::endl;
+        sv[i].fd = sfd;
         sfds.push_back( sfd );
         int host_adlen = sizeof(sv[i].sockett);
         sv[i].sockett.sin_family = AF_INET;
@@ -103,5 +93,3 @@ void    multiplexing( std::vector<Server> & sv )
         }
     }
 }
-
-
