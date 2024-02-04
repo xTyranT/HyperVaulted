@@ -1,12 +1,5 @@
 #include "../includes/Server.hpp"
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <cstdlib>
+#include "../includes/Request.hpp"
 
 
 int main(int argc, char** argv)
@@ -21,11 +14,21 @@ int main(int argc, char** argv)
         if (!file.is_open())
             throw std::invalid_argument("no such file or permission denied");
         std::vector<Server> sv = getAvailableServers(file);
-        for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
-            i->printServerAttributes();
+        // for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
+        //     i->printServerAttributes();
+
+        Request request;
+        std::string  req;
+
+        req = request.getRequest();
+        request.requestParser(req);
+        request.printRequestComponents();
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }
+    // std::string s = "hello owrld";
+    // s.erase(remove(s.begin(), s.end(), 'o'), s.end());
+    // std::cout << s << std::endl;
 }

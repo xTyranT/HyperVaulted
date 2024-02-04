@@ -34,8 +34,9 @@ class Server
         long maxBodySize;
         std::vector<Location> location;
         std::vector<Location>::iterator l_i;
+        int fd;
         Server(void);
-        void defaultErrorPages(void);
+        void generateErrorPages(void);
         void checkNecessaryAttributes(void);
         void printServerAttributes(void);
         void checkAndStoreServerAttributes(std::vector<std::string> attr, std::ifstream& file);

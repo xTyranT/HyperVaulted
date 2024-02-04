@@ -18,10 +18,16 @@ std::vector<Server> getAvailableServers(std::ifstream& file)
 
 Location::Location(void)
 {
+    path = std::string();
+    methods = std::vector<std::string>();
+    root = std::string();
+    indexes = std::vector<std::string>();
     autoIndex = false;
     upload = false;
     cgi = false;
-    ret.insert(std::pair<int, std::string>(301, "https://google.com"));
+    uploadPath = std::string();
+    cgiPaths = std::vector<std::string>();
+    ret.insert(std::pair<int, std::string>(301, "http://localhost:8080"));
 }
 
 void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
@@ -37,6 +43,17 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         {
             if (*i != "GET" && *i != "POST" && *i != "DELETE")
                 throw std::invalid_argument("methods given not known");
+        }
+        for (i = methods.begin() ; i != methods.end(); i++)
+        {
+            if (*i != "GET" && *i != "POST" && *i != "DELETE")
+                throw std::invalid_argument("methods given not known");
+            std::vector<std::string>::iterator j = i + 1;
+            for(j = i + 1; j != methods.end(); j++)
+            {
+                if (*i == *j)
+                    throw std::invalid_argument("methods shall not be duplicated");
+            }
         }
     }
     else if (*i == ROOT)
@@ -109,7 +126,7 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         if (tmp.first != 301)
             throw std::invalid_argument("return should be only 301");
         tmp.second = *(i + 2);
-        ret.insert(tmp);
+        ret[301] = tmp.second;
     }
     else
         throw std::invalid_argument(*(attr.begin()) + " unknown location variable");
@@ -121,8 +138,14 @@ void Location::checkNecessaryAttributes(void)
         throw std::invalid_argument("methods must be specified with one of the following:   GET POST DELETE");
     if (root.empty())
         throw std::invalid_argument("location root must be specified");
-    if (uploadPath.empty())
+    if (upload == true && uploadPath.empty())
         throw std::invalid_argument("location upload_path must be specified");
+    if(upload == false && !uploadPath.empty())
+        throw std::invalid_argument("location upload_path must be specified only if upload is on");
+    if (cgi == true && cgiPaths.empty())
+        throw std::invalid_argument("location cgi_path must be specified");
+    if(cgi == false && !cgiPaths.empty())
+        throw std::invalid_argument("location cgi_path must be specified only if cgi is on");
 }
 
 Location::~Location(void)
@@ -132,25 +155,30 @@ Location::~Location(void)
 
 Server::Server(void)
 {
-    port = -1;
-    defaultErrorPages();
-    maxBodySize = 1000;
+    port = int();
+    host = std::string();
+    root = std::string();
+    indexes = std::vector<std::string>();
+    srvNames = std::vector<std::string>();
+    errPages = std::map<int, std::string>();
+    generateErrorPages();
+    maxBodySize = 1024;
+    location = std::vector<Location>();
     l_i = location.begin();
 }
 
 bool Server::empty(void)
 {
     bool var = true;
-    if (port != -1)
+    if (port || !host.empty() || !root.empty() || !indexes.empty() || !srvNames.empty() || !location.empty())
         var = false;
-    if(maxBodySize != 1000)
+    if(maxBodySize != 1024)
         var = false;
     return var;
 }
 
-void Server::defaultErrorPages(void)
+void Server::generateErrorPages(void)
 {
-    // auto generate the error page
     errPages.insert(std::pair<int, std::string>(400, "./errorPages/400.html"));
     errPages.insert(std::pair<int, std::string>(403, "./errorPages/403.html"));
     errPages.insert(std::pair<int, std::string>(404, "./errorPages/404.html"));
@@ -162,38 +190,49 @@ void Server::defaultErrorPages(void)
 void Server::printServerAttributes(void)
 {
     std::cout << "-------------SERVER VAR-------------\n";
-    std::cout << port << std::endl;
-    std::cout << host << std::endl;
-    std::cout << root << std::endl;
+    std::cout << "port: " << port << std::endl;
+    std::cout << "host: " << host << std::endl;
+    std::cout << "root: "<< root << std::endl;
+    std::cout << "index: ";
     for (size_t i = 0; i < indexes.size(); i++)
     {
         std::cout << indexes[i] << " ";
     }
     std::cout << std::endl;
+    std::cout << "server_name: ";
     for (size_t i = 0; i < srvNames.size(); i++)
         std::cout << srvNames[i] << " ";
     std::cout << std::endl;
+    std::cout << "---error_pages---\n";
     for (std::map<int, std::string>::iterator i = errPages.begin(); i != errPages.end(); i++)
         std::cout << i->first << " | " << i->second << std::endl;
     std::cout << maxBodySize << std::endl;
     for (std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
     {
         std::cout << "-------------LOCATION VAR-------------\n";
-        std::cout << i->path << std::endl;
+        std::cout << "path: " << i->path << std::endl;
+        std::cout << "methods: ";
         for (size_t j = 0; j < i->methods.size(); j++)
             std::cout << i->methods[j] << " ";
         std::cout << std::endl;
+        std::cout << "root: ";
         std::cout <<  i->root << std::endl;
         for (size_t j = 0; j < i->indexes.size(); j++)
             std::cout << i->indexes[j] << " ";
         std::cout << std::endl;
-        std::cout << i->autoIndex << std::endl;
-        std::cout << i->upload << std::endl;
-        std::cout << i->cgi << std::endl;
-        std::cout << i->uploadPath << std::endl;
+        std::string line;
+        (i->autoIndex) ? line = "autoindex is on" : line = "autoindex is off";
+        std::cout << line << std::endl;
+        (i->upload) ? line = "upload is on" : line = "upload is off";
+        std::cout << line<< std::endl;
+        (i->cgi) ? line = "cgi is on" : line = "cgi is off";
+        std::cout << line << std::endl;
+        std::cout << "upload_path: " << i->uploadPath << std::endl;
+        std::cout << "cgi_paths: ";
         for (size_t j = 0; j < i->cgiPaths.size(); j++)
             std::cout << i->cgiPaths[j] << " ";
         std::cout << std::endl;
+        std::cout << "redirecting link: ";
         for (std::map<int, std::string>::iterator j = i->ret.begin(); j != i->ret.end(); j++)
             std::cout << j->first << " | " << j->second << std::endl;
     }
@@ -288,7 +327,7 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
         while(line != "}")
         {
             std::getline(file, line);
-            strtrim(line);
+            strtrim(line, "\n ");
             if (line.empty() || line.at(0) == '#')
                 continue;
             std::string temp = line;
@@ -331,14 +370,14 @@ void Server::serverBlock(std::ifstream& file)
         std::getline(file, line);
         if (file.eof())
             return;
-        strtrim(line);
+        strtrim(line, "\n ");
     }
-    strtrim(line);
+    strtrim(line, "\n ");
     if (line != SERVER)
         throw std::invalid_argument("config file requires a server block: \nserver\n{\n  ...\n}");
     while(std::getline(file, line))
     {
-        strtrim(line);
+        strtrim(line, "\n ");
         if (line.empty() || line.at(0) == '#')
             continue;
         else if (line == "{")
