@@ -14,7 +14,6 @@
 
 void    accept_connection( int efd , int fd, std::map<int , class Client> & Clients )
 {
-    char buffer[1024];
     Client cl;
     struct epoll_event event;
     struct sockaddr_in newcon;
@@ -23,16 +22,15 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
 
     int cfd = accept( fd , reinterpret_cast< struct sockaddr * >(&newcon) , reinterpret_cast<socklen_t*>(&len));
     if ( cfd == -1 )
-        return ( perror("error "));
-    
+        std::cout << strerror(errno) << std::endl;
+    cl.svfd = fd;
     Clients[cfd] = cl;
-
-    //fcntl(cfd, F_SETFL, O_NONBLOCK);
+    // fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
     event.events = EPOLLIN | EPOLLOUT;
 
     if ( epoll_ctl( efd , EPOLL_CTL_ADD , cfd , &event) == -1 )
-        return ( perror("ctr"));
+        std::cout << strerror(errno) << std::endl;
 
 }
 
@@ -46,55 +44,62 @@ void    multiplexing( std::vector<Server> & sv )
 
     int efd = epoll_create1(0);
     if ( efd == -1 )
-        throw std::invalid_argument(" creat ");
+        std::cout << "epoll_creat" << strerror(errno) << std::endl;
     for (size_t i = 0 ; i < sv.size() ; i++)
     {
         int sfd = socket(AF_INET, SOCK_STREAM, 0);
-        if ( sfd == -1 ){
-            throw std::invalid_argument(" soket ");
-            continue;
-        }
+        if ( sfd == -1 )
+            std::cout << "socket " << strerror(errno) << std::endl;
         sfds.push_back( sfd );
         int host_adlen = sizeof(sv[i].sockett);
         sv[i].sockett.sin_family = AF_INET;
         sv[i].sockett.sin_port = htons(sv[i].port);
         sv[i].sockett.sin_addr.s_addr = htonl(INADDR_ANY);
-        if ( bind(sfd, (struct sockaddr *)&sv[i].sockett , host_adlen) == -1){
-            std::cout << sv[i].port << std::endl;
-            //throw std::invalid_argument(" bind ");
-        }
+        int opt = 1;
+        setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(int));
+        if ( bind(sfd, (struct sockaddr *)&(sv[i].sockett ), host_adlen) == -1)
+            std::cout << "bind " << strerror(errno) << std::endl;
 
         if ( listen(sfd, SOMAXCONN) != 0)
-            throw std::invalid_argument(" listen ");
+            std::cout << "listen " << strerror(errno) << std::endl;
         ev.data.fd = sfd;
         ev.events = EPOLLIN | EPOLLET;
         if ( epoll_ctl(efd, EPOLL_CTL_ADD , sfd , &ev ) == -1)
-            throw std::invalid_argument(" ctl ");
-
+            std::cout << "epoll_ctl " << strerror(errno) << std::endl;
     }
 
     while( 1 ){
         
         int wp = epoll_wait(efd , events , MAX_EVENTS , -1);
         if (wp == -1)
-            throw std::invalid_argument(" wait ");
-        
-        for ( int i = 0  ; i < wp ; i++) 
+            std::cout << "epoll_wait " << strerror(errno) << std::endl;
+
+        for ( int i = 0  ; i < wp ; i++ ) 
         {
             int fd = events[i].data.fd;
             std::vector<int>::iterator it = std::find(sfds.begin() , sfds.end(), fd);
             if ( it != sfds.end() )
                 accept_connection( efd , fd , Clients);
+            else if (((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) ))
+                        close(events[i].data.fd);
             else if ( Clients.find(fd) != Clients.end())
             {
-                int rd = read(fd, buff, 1024);
-                Clients[fd].requires.append(buff);
-                if ( Clients[fd].requires.find("\r\n\r\n") != std::string::npos )
+                memset(buff, 0 , 1024);
+                if ( events[i].events & EPOLLIN )
                 {
-                    std::cout << Clients[fd].requires << std::endl;
+                    int rd = recv(fd, buff, 1023, 0);
+                    if ( rd == -1 )
+                        std::cout << "recv " << strerror(errno) << std::endl;
+                    Clients[fd].request.append(buff);
+                    size_t find = Clients[fd].request.find("\r\n\r\n");
+                    if ( find != std::string::npos && !Clients[fd].read)
+                    {
+                        Clients[fd].read = true;
+                        Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
+                        std::cout << Clients[fd].request << std::endl;
+                    }
                 }
             }
-                
         }
     }
 }

@@ -5,5 +5,9 @@
 class   Client
 {   
     public:
-        std::string requires;
+        int svfd;
+        std::string request;
+        std::string requestHeader;
+        bool read;
+        Client ();
 }; 

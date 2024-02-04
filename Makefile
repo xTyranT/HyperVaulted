@@ -1,6 +1,6 @@
 CPP = c++
 
-CPPFLAGS = -std=c++98 -fsanitize=address -g3 #-Wall -Werror -Wextra
+CPPFLAGS = -std=c++98 -fsanitize=address -g3 -Wall -Werror -Wextra
 
 SRCSDIR = ./srcs
 
@@ -10,7 +10,7 @@ OBJSDIR = ./objs
 
 NAME = HyperVaulted
 
-SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp
+SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp
 
 UTIL_FILES = stringManipulators.cpp
 
