@@ -1,12 +1,12 @@
 #include "../includes/stringManipulators.hpp"
 
-void strtrim(std::string& s)
+void strtrim(std::string& s, std::string set)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::bind1st(std::not_equal_to<char>(), ' ')));
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::bind1st(std::not_equal_to<char>(), ' ')).base(), s.end());
-
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::bind1st(std::not_equal_to<char>(), '\n')));
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::bind1st(std::not_equal_to<char>(), '\n')).base(), s.end());
+    for(std::string::iterator i = set.begin(); i != set.end(); i++)
+    {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::bind1st(std::not_equal_to<char>(), *i)));
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::bind1st(std::not_equal_to<char>(), *i)).base(), s.end());
+    }
 }
 
 bool skippableCharacterString(std::string line)

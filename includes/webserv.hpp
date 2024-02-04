@@ -7,7 +7,7 @@
 #define HOST "host"
 #define ROOT "root"
 #define INDEX "index"
-#define SRVNAMES "server_names"
+#define SRVNAMES "server_name"
 #define ERRPAGES "error_page"
 #define MAXBDSIZE "max_body_size"
 #define LOCATION "location"
