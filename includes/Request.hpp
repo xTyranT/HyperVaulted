@@ -24,7 +24,8 @@ class  Request
         std::string getRequest(void);
         void requestParser(std::string& request, std::vector<Server>& vec);
         int valueChecker(std::vector<Server>& vec);
-        void generateCoresspondingErrorPage(void);
+        void generateCorrespondingErrorPage(void);
+        std::string errorPageMessage(void);
         bool pathURIChecker(std::string& URI);
         void printRequestComponents(void);
         ~Request(void);

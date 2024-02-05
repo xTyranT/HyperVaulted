@@ -16,7 +16,7 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     cl.svfd = fd;
     cl.parsedRequest.sFd = fd;
     Clients[cfd] = cl;
-    // fcntl(cfd, F_SETFL, O_NONBLOCK);
+    fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
     event.events = EPOLLIN | EPOLLOUT;
 

@@ -31,7 +31,7 @@ int Request::valueChecker(std::vector<Server>& vec)
 {
     if (!httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Transfer-Encoding"] != "chunked")
         return 501;
-    if (httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Content-length"].empty() && Component.method == "POST")
+    if (httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Content-Length"].empty() && Component.method == "POST")
         return 400;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
@@ -43,14 +43,46 @@ int Request::valueChecker(std::vector<Server>& vec)
         return 414;
     int cl = std::atof(httpHeaders["Content-Length"].c_str());
     for(std::vector<Server>::iterator i = vec.begin(); i != vec.end(); i++)
-        if(sFd == i->fd && cl != i->maxBodySize)
+        if(sFd == i->fd && cl > i->maxBodySize)
             return 413;
     return 200;
 }
 
-void Request::generateCoresspondingErrorPage(void)
+std::string Request::errorPageMessage(void)
 {
+    if (returnCode == 400)
+        return std::string("Bad Request");
+    if (returnCode == 414)
+        return std::string("Request URI Too Long");
+    if (returnCode == 404)
+        return std::string("Not Found");
+    if (returnCode == 501)
+        return std::string("Not Implemented");
+    if (returnCode == 413)
+        return std::string("Request Entity Too Large");
+    return std::string();
+}
 
+void Request::generateCorrespondingErrorPage(void)
+{
+    std::stringstream rCode;
+    rCode << returnCode;
+    std::string fileName = "/home/tyrant/webserv/ErrorPages/" + rCode.str() + ".html";
+    std::ifstream content("/home/tyrant/webserv/ErrorPages/error_page.html");
+    if (!content.is_open())
+        std::cout << strerror(errno) << std::endl;
+    std::stringstream file;
+    file << content.rdbuf();
+    std::string buffer = file.str();
+
+    size_t pos = buffer.find("TEMPLATE-TEXT-HERE");
+    while (pos != std::string::npos)
+    {
+        buffer.replace(pos, 18, errorPageMessage());
+        pos = buffer.find("TEMPLATE-TEXT-HERE", pos + errorPageMessage().size()); 
+    }
+    std::ofstream result(fileName.c_str());
+    result << buffer;
 }
 
 void Request::requestParser(std::string &request, std::vector<Server>& vec)
@@ -80,6 +112,7 @@ void Request::requestParser(std::string &request, std::vector<Server>& vec)
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
     returnCode = valueChecker(vec);
+    generateCorrespondingErrorPage();
 }
 
 void Request::printRequestComponents(void)
