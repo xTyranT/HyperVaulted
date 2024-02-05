@@ -27,7 +27,7 @@ bool Request::pathURIChecker(std::string& URI)
     return false;
 }
 
-int Request::valueChecker(void)
+int Request::valueChecker(std::vector<Server>& vec)
 {
     if (!httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Transfer-Encoding"] != "chunked")
         return 501;
@@ -41,13 +41,19 @@ int Request::valueChecker(void)
         return 400;
     if (Component.path.size() > 2048)
         return 414;
-    
-    // if (std::atof(httpHeaders["Content-Length"].c_str()) != )
+    int cl = std::atof(httpHeaders["Content-Length"].c_str());
+    for(std::vector<Server>::iterator i = vec.begin(); i != vec.end(); i++)
+        if(sFd == i->fd && cl != i->maxBodySize)
+            return 413;
     return 200;
-    
 }
 
-int Request::requestParser(std::string &request)
+void Request::generateCoresspondingErrorPage(void)
+{
+
+}
+
+void Request::requestParser(std::string &request, std::vector<Server>& vec)
 {
     std::cout << request << std::endl;
     std::cout << "===================================================\n";
@@ -57,12 +63,10 @@ int Request::requestParser(std::string &request)
     std::getline(stream, line);
     line.erase(remove(line.begin(), line.end(), '\n'), line.end());
     line.erase(remove(line.begin(), line.end(), '\r'), line.end());
-    std::vector<std::string> vec = split(line);
-    if(vec.size() != 3)
-        return 403;
-    Component.method = *(vec.begin());
-    Component.path = *(vec.begin() + 1);
-    Component.httpVersion = *(vec.begin() + 2);
+    std::vector<std::string> splitted = split(line);
+    Component.method = *(splitted.begin());
+    Component.path = *(splitted.begin() + 1);
+    Component.httpVersion = *(splitted.begin() + 2); // if a segv happens it's probably caused by this line
     std::getline(stream, line);
     line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     while (!line.empty())
@@ -75,8 +79,7 @@ int Request::requestParser(std::string &request)
         std::getline(stream, line);
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
-    valueChecker();
-    return 200;
+    returnCode = valueChecker(vec);
 }
 
 void Request::printRequestComponents(void)

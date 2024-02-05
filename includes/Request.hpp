@@ -1,6 +1,6 @@
 #pragma once
 
-#include "webserv.hpp"
+#include "Server.hpp"
 
 class RequestLine
 {
@@ -18,11 +18,13 @@ class  Request
     public:
         RequestLine Component;
         std::map<std::string, std::string>  httpHeaders;
-
+        int returnCode;
+        int sFd;
         Request(void);
         std::string getRequest(void);
-        int requestParser(std::string& request);
-        int valueChecker(void);
+        void requestParser(std::string& request, std::vector<Server>& vec);
+        int valueChecker(std::vector<Server>& vec);
+        void generateCoresspondingErrorPage(void);
         bool pathURIChecker(std::string& URI);
         void printRequestComponents(void);
         ~Request(void);

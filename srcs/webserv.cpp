@@ -19,15 +19,6 @@ int main(int argc, char** argv)
 
         //for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
           //  i->printServerAttributes();
-        // for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
-        //     i->printServerAttributes();
-
-        Request request;
-        std::string  req;
-
-        req = request.getRequest();
-        request.requestParser(req);
-        request.printRequestComponents();
     }
     catch(const std::exception& e)
     {

@@ -14,6 +14,7 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     if ( cfd == -1 )
         std::cout << strerror(errno) << std::endl;
     cl.svfd = fd;
+    cl.parsedRequest.sFd = fd;
     Clients[cfd] = cl;
     // fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
@@ -86,7 +87,8 @@ void    multiplexing( std::vector<Server> & sv )
                     {
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
-                        std::cout << Clients[fd].request << std::endl;
+                        Clients[fd].parsedRequest.requestParser(Clients[fd].requestHeader, sv);
+                        Clients[fd].parsedRequest.printRequestComponents();
                     }
                 }
             }

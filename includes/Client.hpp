@@ -1,6 +1,8 @@
 
 #pragma once
-#include "stringManipulators.hpp"
+
+#include "webserv.hpp"
+#include "../includes/Request.hpp"
 
 class   Client
 {   
@@ -8,6 +10,7 @@ class   Client
         int svfd;
         std::string request;
         std::string requestHeader;
+        Request parsedRequest;
         bool read;
         Client ();
 }; 
