@@ -15,8 +15,8 @@ int main(int argc, char** argv)
             throw std::invalid_argument("no such file or permission denied");
         std::vector<Server> sv = getAvailableServers(file);
         multiplexing(sv);
-        for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
-           i->printServerAttributes();
+        // for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
+        //    i->printServerAttributes();
     }
     catch(const std::exception& e)
     {

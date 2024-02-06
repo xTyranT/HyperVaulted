@@ -27,7 +27,7 @@ Location::Location(void)
     cgi = false;
     uploadPath = std::string();
     cgiPaths = std::vector<std::string>();
-    ret.insert(std::pair<int, std::string>(301, "http://localhost:8080"));
+    ret = std::map<int, std::string>();
 }
 
 void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
@@ -134,10 +134,8 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
 
 void Location::checkNecessaryAttributes(void)
 {
-    if (methods.size() == 0)
+    if (methods.empty())
         throw std::invalid_argument("methods must be specified with one of the following:   GET POST DELETE");
-    if (root.empty())
-        throw std::invalid_argument("location root must be specified");
     if (upload == true && uploadPath.empty())
         throw std::invalid_argument("location upload_path must be specified");
     if(upload == false && !uploadPath.empty())
@@ -161,30 +159,18 @@ Server::Server(void)
     indexes = std::vector<std::string>();
     srvNames = std::vector<std::string>();
     errPages = std::map<int, std::string>();
-    generateErrorPages();
-    maxBodySize = 1024;
+    maxBodySize = long();
     location = std::vector<Location>();
-    l_i = location.begin();
+    l_i = location.end();
 }
 
 bool Server::empty(void)
 {
     bool var = true;
-    if (port || !host.empty() || !root.empty() || !indexes.empty() || !srvNames.empty() || !location.empty())
-        var = false;
-    if(maxBodySize != 1024)
+    if (maxBodySize || port || !host.empty()|| !root.empty() || !indexes.empty() 
+        || !srvNames.empty() || !errPages.empty() || !location.empty())
         var = false;
     return var;
-}
-
-void Server::generateErrorPages(void)
-{
-    errPages.insert(std::pair<int, std::string>(400, "./errorPages/400.html"));
-    errPages.insert(std::pair<int, std::string>(403, "./errorPages/403.html"));
-    errPages.insert(std::pair<int, std::string>(404, "./errorPages/404.html"));
-    errPages.insert(std::pair<int, std::string>(405, "./errorPages/405.html"));
-    errPages.insert(std::pair<int, std::string>(500, "./errorPages/500.html"));
-    errPages.insert(std::pair<int, std::string>(501, "./errorPages/501.html"));
 }
 
 void Server::printServerAttributes(void)
@@ -206,7 +192,7 @@ void Server::printServerAttributes(void)
     std::cout << "---error_pages---\n";
     for (std::map<int, std::string>::iterator i = errPages.begin(); i != errPages.end(); i++)
         std::cout << i->first << " | " << i->second << std::endl;
-    std::cout << maxBodySize << std::endl;
+    std::cout << "max_body_size " << maxBodySize << std::endl;
     for (std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
     {
         std::cout << "-------------LOCATION VAR-------------\n";
@@ -217,6 +203,7 @@ void Server::printServerAttributes(void)
         std::cout << std::endl;
         std::cout << "root: ";
         std::cout <<  i->root << std::endl;
+        std::cout << "index: ";
         for (size_t j = 0; j < i->indexes.size(); j++)
             std::cout << i->indexes[j] << " ";
         std::cout << std::endl;
@@ -287,31 +274,13 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
     }
     else if (*i == ERRPAGES)
     {
+        if (attr.size() != 2)
+            throw std::invalid_argument("error_page syntax: error_page <error_code>");
         i++;
         int err = std::atoi(i->c_str());
-        switch (err)
-        {
-            case 400:
-                errPages.insert(std::pair<int, std::string>(400, *(i + 1)));
-                break;
-            case 403:
-                errPages.insert(std::pair<int, std::string>(403, *(i + 1)));
-                break;
-            case 404:
-                errPages.insert(std::pair<int, std::string>(403, *(i + 1)));
-                break;
-            case 405:
-                errPages.insert(std::pair<int, std::string>(405, *(i + 1)));
-                break;
-            case 500:
-                errPages.insert(std::pair<int, std::string>(500, *(i + 1)));
-                break;
-            case 501:
-                errPages.insert(std::pair<int, std::string>(501, *(i + 1)));
-                break;
-            default:
-                throw std::invalid_argument("error_page is not valid");
-        }
+        if (err < 1)
+            throw std::invalid_argument("error code should not be negative");
+        errPages.insert(std::pair<int, std::string>(err, std::string()));
     }
     else if ( *i == LOCATION)
     {
@@ -345,17 +314,31 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
         throw std::invalid_argument(*(attr.begin()) + " unknown server variable");
 }
 
-void Server::checkNecessaryAttributes(void)
+void Server::checkAndSetNecessaryAttributes(void)
 {
-    if (port < 1)
-        throw std::invalid_argument("a listening port is necessary");
-    if (root.size() == 0)
+    if (port < 0)
+        throw std::invalid_argument("a listening port should bbe positive");
+    if (root.empty())
         throw std::invalid_argument("a root is necessary");
-    if (location.size() > 0)
+    if (!location.empty())
     {
         for (std::vector<Location>::iterator i = location.begin(); i != location.end(); i++)
+        {
             i->checkNecessaryAttributes();
+            if (i->root.empty())
+                i->root = root;
+            if (i->indexes.empty())
+                i->indexes = indexes;
+        }
     }
+    if (!port)
+        port = 80;
+    if (!maxBodySize)
+        maxBodySize = 1024;
+    if (host.empty())
+        host = "localhost";
+    if (indexes.empty())
+        indexes.push_back("index.html");
 }
 
 void Server::serverBlock(std::ifstream& file)
@@ -397,7 +380,7 @@ void Server::serverBlock(std::ifstream& file)
     }
     if (!brackets.empty())
         throw std::invalid_argument("opened bracket not closed");
-    checkNecessaryAttributes();
+    checkAndSetNecessaryAttributes();
 }
 
 Server::~Server(void)
