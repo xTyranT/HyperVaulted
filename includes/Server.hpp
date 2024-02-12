@@ -46,4 +46,5 @@ class Server
 };
 
 std::vector<Server> getAvailableServers(std::ifstream& file);
-void    multiplexing( std::vector<Server> & sv );
+void fillMimeTypes(void);
+void multiplexing( std::vector<Server> & sv );

@@ -20,15 +20,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdio.h>
-
-void strtrim(std::string& s);
 #include <errno.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <iomanip>
 #include <locale>
 #include <fcntl.h>
 #include <limits.h>
 
+std::string to_string(int value);
 void strtrim(std::string& s, std::string set);
 bool skippableCharacterString(std::string line);
 std::vector<std::string> split(std::string& line);

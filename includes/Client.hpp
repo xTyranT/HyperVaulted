@@ -2,7 +2,7 @@
 #pragma once
 
 #include "webserv.hpp"
-#include "../includes/Request.hpp"
+#include "../includes/Response.hpp"
 
 class   Client
 {   
@@ -10,7 +10,8 @@ class   Client
         int svfd;
         std::string request;
         std::string requestHeader;
-        Request parsedRequest;
+        Response reqRes;
+
         bool read;
         Client ();
 }; 

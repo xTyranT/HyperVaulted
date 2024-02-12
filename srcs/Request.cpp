@@ -1,4 +1,4 @@
-#include "../includes/Request.hpp"
+#include "../includes/Response.hpp"
 
 RequestLine::RequestLine(void)
 {
@@ -6,6 +6,15 @@ RequestLine::RequestLine(void)
     path = std::string();
     httpVersion = std::string();
 }
+
+const RequestLine& RequestLine::operator=(const RequestLine& other)
+{
+    method = other.method;
+    path = other.path;
+    httpVersion = other.httpVersion;
+    return *this;
+}
+
 
 RequestLine::~RequestLine(void)
 {
@@ -17,11 +26,20 @@ Request::Request(void)
     httpHeaders = std::map<std::string, std::string>();
 }
 
+Request::Request(const Request& other)
+{
+    Component = other.Component;
+    httpHeaders = other.httpHeaders;
+    returnCode = other.returnCode;
+    sFd = other.sFd;
+}
+
+
 bool Request::pathURIChecker(std::string& URI)
 {
     for(std::string::iterator i = URI.begin(); i != URI.end(); i++)
     {
-        if (!std::isprint(*i))
+        if (!std::isprint(*i) || std::isspace(*i))
             return true;
     }
     return false;
@@ -42,7 +60,12 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 400;
     if (Component.path.size() > 2048)
         return 414;
-    int cl = std::atof(httpHeaders.find("Content-Length")->second.c_str());
+    if (pathURIChecker(Component.path))
+        return 400;
+    int cl;
+    std::map<std::string, std::string>::iterator it = httpHeaders.find("Content-Length");
+        if (it != httpHeaders.end())
+            cl = std::atof(httpHeaders.find("Content-Length")->second.c_str());
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
         if(sFd == i->fd && cl > i->maxBodySize)
             return 413;
@@ -51,8 +74,12 @@ int Request::valueChecker(std::vector<Server>& srv)
 
 std::string Request::errorPageMessage(void)
 {
+    if (returnCode == 301)
+        return std::string("Moved Permanently");
     if (returnCode == 400)
         return std::string("Bad Request");
+    if (returnCode == 405)
+        return std::string("Method Not Allowed");
     if (returnCode == 414)
         return std::string("Request URI Too Long");
     if (returnCode == 404)
@@ -66,7 +93,7 @@ std::string Request::errorPageMessage(void)
 
 std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 {
-    if (returnCode != 200)
+    if (returnCode != 200 && returnCode != 301)
     {
         std::stringstream rCode;
         rCode << returnCode;
@@ -103,7 +130,7 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
                 std::vector<Location>::iterator j;
                 for (j = i->location.begin(); j != i->location.end(); j++)
                 {
-                    std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
+                    std::string absPath = Component.path.substr(0, Component.path.rfind('/'));
                     if (absPath != "/" && absPath == j->path)
                         return *j;
                 }
@@ -133,31 +160,46 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
         std::pair<std::string, std::string> keyValue;
         keyValue.first = line.substr(0, i);
         keyValue.second = line.substr(i + 1, line.size() - i);
+        strtrim(keyValue.second, " ");
         httpHeaders.insert(keyValue);
         std::getline(stream, line);
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
     returnCode = valueChecker(srv);
     if (returnCode != 200)
+    {
         generateCorrespondingErrorPage();
-
-    else
+        Response& res = static_cast<Response&>(*this);
+        res.formTheResponse();
+    }
+    else if (returnCode == 200)
     {
         Location match;
         try
         {
             match = matchURIWithLocation(srv);
-            // if (!match.ret.empty())
-                // redirect to it;
-            // else
-                // send The corresponding response
-                /*
-                    http version | status code | message\r\n
-                    Content-Type: <value>\r\n
-                    Content-Length: <value>\r\n
-                    \r\n
-                    <body>
-                */ 
+            if (!match.ret.empty())
+            {
+                Response& res = static_cast<Response&>(*this);
+                res.permanentRedirecting();
+            }
+            else
+            {
+                std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
+                if (i == match.methods.end())
+                {
+                    returnCode = 405;
+                    generateCorrespondingErrorPage();
+                    Response& res = static_cast<Response&>(*this);
+                    res.formTheResponse();
+                }
+                else
+                {
+                    Response& res = static_cast<Response&>(*this);
+                    if (Component.method == "GET")
+                        res.getMethod(match);
+                }
+            }
         }
         catch(const std::exception& e)
         {
