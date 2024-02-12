@@ -31,7 +31,7 @@ int Request::valueChecker(std::vector<Server>& vec)
 {
     if (!httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Transfer-Encoding"] != "chunked")
         return 501;
-    if (httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Content-length"].empty() && Component.method == "POST")
+    if (httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Content-Length"].empty() && Component.method == "POST")
         return 400;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
@@ -55,8 +55,8 @@ void Request::generateCoresspondingErrorPage(void)
 
 void Request::requestParser(std::string &request, std::vector<Server>& vec)
 {
-    std::cout << request << std::endl;
-    std::cout << "===================================================\n";
+    // std::cout << request << std::endl;
+    // std::cout << "===================================================\n";
     std::stringstream stream;
     std::string line;
     stream << request;

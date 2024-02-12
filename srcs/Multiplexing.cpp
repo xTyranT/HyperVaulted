@@ -16,7 +16,7 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     cl.svfd = fd;
     cl.parsedRequest.sFd = fd;
     Clients[cfd] = cl;
-    // fcntl(cfd, F_SETFL, O_NONBLOCK);
+    fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
     event.events = EPOLLIN | EPOLLOUT;
 
@@ -60,37 +60,60 @@ void    multiplexing( std::vector<Server> & sv )
     }
 
     while( 1 ){
-        
         int wp = epoll_wait(efd , events , MAX_EVENTS , -1);
         if (wp == -1)
             std::cout << "epoll_wait " << strerror(errno) << std::endl;
 
         for ( int i = 0  ; i < wp ; i++ ) 
         {
+            
             int fd = events[i].data.fd;
             std::vector<int>::iterator it = std::find(sfds.begin() , sfds.end(), fd);
             if ( it != sfds.end() )
                 accept_connection( efd , fd , Clients);
             else if (((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) ))
                         close(events[i].data.fd);
-            else if ( Clients.find(fd) != Clients.end())
+            else if ( events[i].events & EPOLLIN )
             {
                 memset(buff, 0 , 1024);
-                if ( events[i].events & EPOLLIN )
+
+                int rd = recv(fd, buff, 1023, 0);
+                if (!Clients[fd].flag)
+                    Clients[fd].sread = 0;
+                Clients[fd].sread += rd;
+                std::cout << "sread   "<< Clients[fd].sread  << "  reading  " << rd << std::endl;
+                // std::cout << "readbyt" << rd << std::endl;
+                // std::cout << buff;
+                // std::cout << "BUFF = " << rd << std::endl;
+                Clients[fd].rd = rd;
+                if ( rd == -1 )
                 {
-                    int rd = recv(fd, buff, 1023, 0);
-                    if ( rd == -1 )
-                        std::cout << "recv " << strerror(errno) << std::endl;
-                    Clients[fd].request.append(buff);
+                    std::cout << "recv " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                // if ( Clients[fd].sread == atof(Clients[fd].parsedRequest.httpHeaders["Content-length"].c_str()) )
+                // {
+                //     std::cout << "HERE" << std::endl;
+                //     exit(1);
+                //     Clients[fd].enf = true;
+                // }
+                if ( !Clients[fd].read ){
+                    Clients[fd].request.append(buff, rd);
                     size_t find = Clients[fd].request.find("\r\n\r\n");
-                    if ( find != std::string::npos && !Clients[fd].read)
+                    if ( find != std::string::npos && !Clients[fd].read )
                     {
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
+                        // std::cout <<Clients[fd].request << std::endl;
                         Clients[fd].parsedRequest.requestParser(Clients[fd].requestHeader, sv);
-                        Clients[fd].parsedRequest.printRequestComponents();
+                        Clients[fd].request = Clients[fd].request.erase(0, find + 4);
+                        //  Clients[fd].parsedRequest.printRequestComponents();
+                        std::cout << Clients[fd].request << std::endl;
+                        Clients[fd].sread -= find + 4;
                     }
                 }
+                if ( Clients[fd].parsedRequest.Component.method == "POST" && !Clients[fd].enf)
+                    Post( Clients[fd] , buff , rd );
             }
         }
     }

@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-void strtrim(std::string& s);
+// void strtrim(std::string& s);
 #include <errno.h>
 #include <netinet/in.h>
 #include <iomanip>
