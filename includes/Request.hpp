@@ -20,12 +20,15 @@ class  Request
         std::map<std::string, std::string>  httpHeaders;
         int returnCode;
         int sFd;
+
         Request(void);
         std::string getRequest(void);
-        void requestParser(std::string& request, std::vector<Server>& vec);
-        int valueChecker(std::vector<Server>& vec);
-        void generateCoresspondingErrorPage(void);
+        void requestParser(std::string& request, std::vector<Server>& srv);
+        int valueChecker(std::vector<Server>& srv);
+        std::pair<int, std::string> generateCorrespondingErrorPage(void);
+        std::string errorPageMessage(void);
         bool pathURIChecker(std::string& URI);
         void printRequestComponents(void);
+        Location& matchURIWithLocation(std::vector<Server>& srv);
         ~Request(void);
 };

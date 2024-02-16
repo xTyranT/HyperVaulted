@@ -81,22 +81,11 @@ void    multiplexing( std::vector<Server> & sv )
                 if (!Clients[fd].flag)
                     Clients[fd].sread = 0;
                 Clients[fd].sread += rd;
-                std::cout << "sread   "<< Clients[fd].sread  << "  reading  " << rd << std::endl;
-                // std::cout << "readbyt" << rd << std::endl;
-                // std::cout << buff;
-                // std::cout << "BUFF = " << rd << std::endl;
-                Clients[fd].rd = rd;
                 if ( rd == -1 )
                 {
                     std::cout << "recv " << strerror(errno) << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                // if ( Clients[fd].sread == atof(Clients[fd].parsedRequest.httpHeaders["Content-length"].c_str()) )
-                // {
-                //     std::cout << "HERE" << std::endl;
-                //     exit(1);
-                //     Clients[fd].enf = true;
-                // }
                 if ( !Clients[fd].read ){
                     Clients[fd].request.append(buff, rd);
                     size_t find = Clients[fd].request.find("\r\n\r\n");
@@ -104,16 +93,14 @@ void    multiplexing( std::vector<Server> & sv )
                     {
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
-                        // std::cout <<Clients[fd].request << std::endl;
                         Clients[fd].parsedRequest.requestParser(Clients[fd].requestHeader, sv);
                         Clients[fd].request = Clients[fd].request.erase(0, find + 4);
-                        //  Clients[fd].parsedRequest.printRequestComponents();
-                        std::cout << Clients[fd].request << std::endl;
                         Clients[fd].sread -= find + 4;
                     }
                 }
                 if ( Clients[fd].parsedRequest.Component.method == "POST" && !Clients[fd].enf)
                     Post( Clients[fd] , buff , rd );
+                    
             }
         }
     }

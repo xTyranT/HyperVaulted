@@ -27,36 +27,94 @@ bool Request::pathURIChecker(std::string& URI)
     return false;
 }
 
-int Request::valueChecker(std::vector<Server>& vec)
+int Request::valueChecker(std::vector<Server>& srv)
 {
-    if (!httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Transfer-Encoding"] != "chunked")
+    std::map<std::string, std::string>::iterator i = httpHeaders.find("Transfer-Encoding");
+    if (i != httpHeaders.end() && i->second != "chunked")
         return 501;
-    if (httpHeaders["Transfer-Encoding"].empty() && httpHeaders["Content-Length"].empty() && Component.method == "POST")
+    if (i == httpHeaders.end() && httpHeaders.find("Content-Length") == httpHeaders.end() && Component.method == "POST")
         return 400;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    if (Component.method == "POST" && httpHeaders["Content-Length"].empty())
+    if (Component.method == "POST" && httpHeaders.find("Content-Length") == httpHeaders.end())
         return 400;
     if (pathURIChecker(Component.path))
         return 400;
     if (Component.path.size() > 2048)
         return 414;
-    int cl = std::atof(httpHeaders["Content-Length"].c_str());
-    for(std::vector<Server>::iterator i = vec.begin(); i != vec.end(); i++)
-        if(sFd == i->fd && cl != i->maxBodySize)
+    int cl = std::atof(httpHeaders.find("Content-Length")->second.c_str());
+    for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
+        if(sFd == i->fd && cl > i->maxBodySize)
             return 413;
     return 200;
 }
 
-void Request::generateCoresspondingErrorPage(void)
+std::string Request::errorPageMessage(void)
 {
-
+    if (returnCode == 400)
+        return std::string("Bad Request");
+    if (returnCode == 414)
+        return std::string("Request URI Too Long");
+    if (returnCode == 404)
+        return std::string("Not Found");
+    if (returnCode == 501)
+        return std::string("Not Implemented");
+    if (returnCode == 413)
+        return std::string("Request Entity Too Large");
+    return std::string();
 }
 
-void Request::requestParser(std::string &request, std::vector<Server>& vec)
+std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 {
-    // std::cout << request << std::endl;
-    // std::cout << "===================================================\n";
+    if (returnCode != 200)
+    {
+        std::stringstream rCode;
+        rCode << returnCode;
+        std::string fileName = "/home/tyrant/webserv/ErrorPages/" + rCode.str() + ".html";
+        std::ifstream content("/home/tyrant/webserv/ErrorPages/error_page.html");
+        if (!content.is_open())
+            std::cout << strerror(errno) << std::endl;
+        std::stringstream file;
+        file << content.rdbuf();
+        std::string buffer = file.str();
+
+        size_t pos = buffer.find("TEMPLATE-TEXT-HERE");
+        while (pos != std::string::npos)
+        {
+            buffer.replace(pos, 18, errorPageMessage());
+            pos = buffer.find("TEMPLATE-TEXT-HERE", pos + errorPageMessage().size());
+        }
+        std::ofstream result(fileName.c_str());
+        result << buffer;
+        return std::pair<int, std::string>(returnCode, fileName);
+    }
+    return std::pair<int, std::string>();
+}
+
+Location& Request::matchURIWithLocation(std::vector<Server>& srv)
+{
+    std::vector<Server>::iterator i;
+    for (i = srv.begin(); i != srv.end(); i++)
+    {
+        if (sFd == i->fd)
+        {
+            if (!i->location.empty())
+            {
+                std::vector<Location>::iterator j;
+                for (j = i->location.begin(); j != i->location.end(); j++)
+                {
+                    std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
+                    if (absPath != "/" && absPath == j->path)
+                        return *j;
+                }
+            }
+        }
+    }
+    throw std::invalid_argument("no match");
+}
+
+void Request::requestParser(std::string &request, std::vector<Server>& srv)
+{
     std::stringstream stream;
     std::string line;
     stream << request;
@@ -79,7 +137,36 @@ void Request::requestParser(std::string &request, std::vector<Server>& vec)
         std::getline(stream, line);
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
-    returnCode = valueChecker(vec);
+    returnCode = valueChecker(srv);
+    if (returnCode != 200)
+        generateCorrespondingErrorPage();
+
+    else
+    {
+        Location match;
+        try
+        {
+            match = matchURIWithLocation(srv);
+            // if (!match.ret.empty())
+                // redirect to it;
+            // else
+                // send The corresponding response
+                /*
+                    http version | status code | message\r\n
+                    Content-Type: <value>\r\n
+                    Content-Length: <value>\r\n
+                    \r\n
+                    <body>
+                */ 
+        }
+        catch(const std::exception& e)
+        {
+            std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
+            if (absPath != "/")
+                returnCode = 404;
+            generateCorrespondingErrorPage();
+        }
+    }
 }
 
 void Request::printRequestComponents(void)
@@ -91,7 +178,6 @@ void Request::printRequestComponents(void)
     for(std::map<std::string, std::string>::iterator i = httpHeaders.begin(); i != httpHeaders.end(); i++)
         std::cout << i->first << " | " << i->second << std::endl;
 }
-
 
 std::string Request::getRequest(void)
 {
