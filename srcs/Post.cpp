@@ -26,7 +26,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     if ( !Clients.flag )
     {
         Clients.flag = true;
-        std::string fname =  "./upload/upload." + gnExtencion( Clients.parsedRequest.httpHeaders["Content-Type"]);
+        std::string fname =  "./upload/upload." + gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);
         Clients.postFile.open(fname.c_str(), std::ios::app | std::ios::binary);
         find = Clients.request.find("\r\n");
         Clients.chunksize = htd( Clients.request.substr(0 , find) );
@@ -64,9 +64,9 @@ void    Post( Client & Clients , char *buff , int rd )
 {
     std::map<std::string, std::string>::iterator it;
 
-    if ( Clients.parsedRequest.httpHeaders.find("Transfer-Encoding") != Clients.parsedRequest.httpHeaders.end() )
+    if ( Clients.reqRes.httpHeaders.find("Transfer-Encoding") != Clients.reqRes.httpHeaders.end() )
     {
-        it = Clients.parsedRequest.httpHeaders.find("Transfer-Encoding");
+        it = Clients.reqRes.httpHeaders.find("Transfer-Encoding");
         if ( it->second == " chunked" )
         {
             ChunkedPost( Clients , buff , rd );
@@ -77,11 +77,11 @@ void    Post( Client & Clients , char *buff , int rd )
     }
     else if ( !Clients.flag )
     {
-        std::string fname =  "./upload/upload." + gnExtencion( Clients.parsedRequest.httpHeaders["Content-Type"]);
+        std::string fname =  "./upload/upload." + gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);
         Clients.postFile.open(fname.c_str(), std::ios::app | std::ios::binary);
         Clients.postFile.write(Clients.request.c_str(), Clients.request.size());
         Clients.flag = true;
-        Clients.contentlength = atoi(Clients.parsedRequest.httpHeaders["Content-Length"].c_str());
+        Clients.contentlength = atoi(Clients.reqRes.httpHeaders["Content-Length"].c_str());
     }
     else
     {

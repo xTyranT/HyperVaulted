@@ -1,6 +1,8 @@
 
 #pragma once
-#include "Request.hpp"
+
+#include "webserv.hpp"
+#include "../includes/Response.hpp"
 
 class   Client
 {   
@@ -9,12 +11,13 @@ class   Client
         std::string chunkedbuff;
         std::string request;
         std::string requestHeader;
-        Request parsedRequest;
         std::string filename;
         std::ofstream postFile;
         int contentlength;
         int sread;
         int svfd;
+        Response reqRes;
+
         bool read;
         bool flag;
         bool enf;

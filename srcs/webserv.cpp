@@ -1,7 +1,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Request.hpp"
 
-
 int main(int argc, char** argv)
 {
     (void)argc;
@@ -14,6 +13,7 @@ int main(int argc, char** argv)
         if (!file.is_open())
             throw std::invalid_argument("no such file or permission denied");
         std::vector<Server> sv = getAvailableServers(file);
+        fillMimeTypes();
         multiplexing(sv);
         // for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
         //    i->printServerAttributes();

@@ -37,3 +37,10 @@ std::vector<std::string> split(std::string& line)
         vector.push_back(line);
     return vector;
 }
+
+std::string to_string(int value)
+{
+    std::stringstream temp;
+    temp << value;
+    return temp.str();
+}

@@ -48,3 +48,5 @@ class Server
 std::vector<Server> getAvailableServers(std::ifstream& file);
 void    multiplexing( std::vector<Server> & sv );
 void    Post( class Client & Clients , char *buff , int rd );
+void fillMimeTypes(void);
+
