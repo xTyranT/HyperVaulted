@@ -88,6 +88,8 @@ std::string Request::errorPageMessage(void)
         return std::string("Not Implemented");
     if (returnCode == 413)
         return std::string("Request Entity Too Large");
+    if (returnCode == 200)
+        return std::string("OK");
     return std::string();
 }
 
@@ -95,9 +97,7 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 {
     if (returnCode != 200 && returnCode != 301)
     {
-        std::stringstream rCode;
-        rCode << returnCode;
-        std::string fileName = "/home/tyrant/webserv/ErrorPages/" + rCode.str() + ".html";
+        std::string fileName = "/home/tyrant/webserv/ErrorPages/" + to_string(returnCode) + ".html";
         std::ifstream content("/home/tyrant/webserv/ErrorPages/error_page.html");
         if (!content.is_open())
             std::cout << strerror(errno) << std::endl;
@@ -140,8 +140,68 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
     throw std::invalid_argument("no match");
 }
 
+void Request::openErrorPage(Server& srv)
+{
+    std::ifstream file(srv.errPages[returnCode].c_str());
+    if (!file.is_open())
+    {
+        generateCorrespondingErrorPage();
+        srv.errPages.erase(returnCode);
+        return;
+    }
+    
+}
+
+void Request::matchLocation(std::vector<Server>& srv, int whichServer)
+{
+    Location match;
+        try
+        {
+            match = matchURIWithLocation(srv);
+            if (!match.ret.empty())
+            {
+                Response& res = static_cast<Response&>(*this);
+                returnCode = 301;
+                res.matchLocation(srv, whichServer);
+                return;
+            }
+            else
+            {
+                std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
+                if (i == match.methods.end())
+                {
+                    returnCode = 405;
+                    openErrorPage(srv[whichServer]);
+                    Response& res = static_cast<Response&>(*this);
+                    res.formTheResponse(srv[whichServer]);
+                }
+                else
+                {
+                    Response& res = static_cast<Response&>(*this);
+                    if (Component.method == "GET")
+                        res.getMethod(match, srv[whichServer]);
+                }
+            }
+    }
+    catch(const std::exception& e)
+    {
+        std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
+        if (absPath != "/")
+            returnCode = 404;
+        openErrorPage(srv[whichServer]);
+    }
+}
+
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
+    std::cout << "REQUEST PARSER" << std::endl;
+    int whichServer = 0;
+    for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
+    {
+        if (sFd == i->fd)
+            break;
+        whichServer++;
+    }
     std::stringstream stream;
     std::string line;
     stream << request;
@@ -168,47 +228,13 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
     returnCode = valueChecker(srv);
     if (returnCode != 200)
     {
-        generateCorrespondingErrorPage();
+        openErrorPage(srv[whichServer]);
         Response& res = static_cast<Response&>(*this);
-        res.formTheResponse();
+        res.formTheResponse(srv[whichServer]);
+        return;
     }
     else if (returnCode == 200)
-    {
-        Location match;
-        try
-        {
-            match = matchURIWithLocation(srv);
-            if (!match.ret.empty())
-            {
-                Response& res = static_cast<Response&>(*this);
-                res.permanentRedirecting();
-            }
-            else
-            {
-                std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
-                if (i == match.methods.end())
-                {
-                    returnCode = 405;
-                    generateCorrespondingErrorPage();
-                    Response& res = static_cast<Response&>(*this);
-                    res.formTheResponse();
-                }
-                else
-                {
-                    Response& res = static_cast<Response&>(*this);
-                    if (Component.method == "GET")
-                        res.getMethod(match);
-                }
-            }
-        }
-        catch(const std::exception& e)
-        {
-            std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
-            if (absPath != "/")
-                returnCode = 404;
-            generateCorrespondingErrorPage();
-        }
-    }
+       matchLocation(srv, whichServer);
 }
 
 void Request::printRequestComponents(void)

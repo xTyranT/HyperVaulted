@@ -6,6 +6,7 @@ class Location
 {
     public:
         std::string path;
+        std::string alias;
         std::vector<std::string> methods;
         std::string root;
         std::vector<std::string> indexes;

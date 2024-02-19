@@ -2,6 +2,12 @@
 
 std::map<std::string, std::string> mimeTypes;
 
+bool validPath(std::string path)
+{
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
+
 void fillMimeTypes(void)
 {
     std::ifstream mt("./tools/mime.types");
@@ -26,6 +32,12 @@ Response::Response(const Response& other) : Request(other)
     responseBuffer = other.responseBuffer;
 }
 
+std::string determineFileExtension(std::string fileName)
+{
+    std::string extension = fileName.substr(fileName.rfind('.') + 1);
+    return mimeTypes[extension];
+}
+
 std::string directoryHasIndex(std::string path, Location& req)
 {
     DIR* directory = opendir(path.c_str());
@@ -34,6 +46,8 @@ std::string directoryHasIndex(std::string path, Location& req)
     {
         for (std::vector<std::string>::iterator i = req.indexes.begin(); i != req.indexes.end(); i++)
         {
+            if (entry->d_name[0] == '.')
+                continue;
             if (std::string(entry->d_name) == *i)
             {
                 closedir(directory);
@@ -43,11 +57,6 @@ std::string directoryHasIndex(std::string path, Location& req)
     }
     closedir(directory);
     return std::string();
-}
-
-void Response::permanentRedirecting(void)
-{
-    std::cout << "here\n";
 }
 
 bool isDirectory(std::string path)
@@ -93,8 +102,28 @@ void Response::listDirFiles(std::string path)
     responseBuffer.append("\r\n");
     responseBuffer.append(tmp);
 }
+#include <signal.h>
+void Response::formChunkedResponse(Location& req, Server& srv)
+{
+    std::string fullPath = req.root + Component.path;
+    if (!file.is_open())
+    {
+        returnCode = 404;
+        openErrorPage(srv);
+        formTheResponse(srv);
+        return;
+    }
+    responseBuffer.append(Component.httpVersion + " ");
+    responseBuffer.append(to_string(returnCode) + " ");
+    responseBuffer.append(errorPageMessage() + "\r\n");
+    responseBuffer.append("Content-Type: ");
+    responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
+    struct stat fileStat;
+    stat(fullPath.c_str(), &fileStat);
+    responseBuffer.append("\r\nContent Length: " + to_string(fileStat.st_size) + "\r\n");
+}
 
-void Response::getMethod(Location& req)
+void Response::getMethod(Location& req, Server& srv)
 {
     std::cout << "GET METHOD" << std::endl;
     std::string fullPath = req.root + Component.path.substr(0, Component.path.rfind('/'));
@@ -104,19 +133,19 @@ void Response::getMethod(Location& req)
     {
         closedir(directory);
         returnCode = 404;
-        generateCorrespondingErrorPage();
-        formTheResponse();
+        openErrorPage(srv);
+        formTheResponse(srv);
     }
     else
     {
         if (isDirectory(req.root + Component.path))
         {
+            std::cout << "IS DIRECTORY" << std::endl;
             if (Component.path[Component.path.size() - 1] != '/')
             {
-                std::cout << "here\n";
                 returnCode = 301;
                 Component.path.append("/");
-                getMethod(req);
+                getMethod(req, srv);
                 return;
             }
             if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == true)
@@ -128,26 +157,44 @@ void Response::getMethod(Location& req)
             else if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == false)
             {
                 returnCode = 403;
-                generateCorrespondingErrorPage();
-                formTheResponse();
+                openErrorPage(srv);
+                formTheResponse(srv);
                 return;
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == false)
             {
                 returnCode = 200;
                 Component.path.append(directoryHasIndex(req.root + Component.path, req));
-                // return the requested file
+                formChunkedResponse(req, srv);
                 return;
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == true)
             {
                 // run cgi on requested file with GET method
-                // return code depend on cgi 
+                // return code depend on cgi
+                return;
             }
         }
         if (req.cgi == false)
         {
+            std::cout << fullPath << std::endl;
+            exit(0);;
+            std::ifstream file(fullPath.c_str());
+            if (!file.is_open())
+            {
+                returnCode = 404;
+                openErrorPage(srv);
+                formTheResponse(srv);
+                return;
+            }
+            else
+            {
+                returnCode = 200;
+                formChunkedResponse(req, srv);
+                return;
+            }
             returnCode = 200;
+            
             // return the requested file
         }
         else if (req.cgi == true)
@@ -158,75 +205,26 @@ void Response::getMethod(Location& req)
     }
 }
 
-std::string determineFileExtension(std::string fileName)
-{
-    std::string extension = fileName.substr(fileName.rfind('.') + 1);
-    return mimeTypes[extension];
-}
-
-std::string Response::appropiateFileLength(void)
-{
-    if (returnCode != 200 && returnCode != 301)
-    {
-        std::stringstream tmp;
-        tmp << returnCode;
-        std::string fileName = "./ErrorPages/" + tmp.str() + ".html";
-        std::ifstream file(fileName.c_str());
-        if (!file.is_open())
-            std::cout << strerror(errno) << std::endl;
-        std::stringstream fileString;
-        fileString << file.rdbuf();
-        std::stringstream size;
-        size << fileString.str().size();
-        return size.str();
-    }
-    return std::string();
-}
-
-std::string Response::appropiateFileBody(void)
-{
-    if (returnCode != 200 && returnCode != 301)
-    {
-        std::stringstream tmp;
-        tmp << returnCode;
-        std::string fileName = "./ErrorPages/" + tmp.str() + ".html";
-        std::ifstream file(fileName.c_str());
-        if (!file.is_open())
-            std::cout << strerror(errno) << std::endl;
-        std::stringstream fileBody;
-        fileBody << file.rdbuf();
-        return fileBody.str();
-    }
-    return std::string();
-}
-
-void Response::formTheResponse(void)
+void Response::formTheResponse(Server& srv)
 {
     responseBuffer.append(Component.httpVersion);
     responseBuffer.append(" ");
-    std::stringstream ret;
-    ret << returnCode;
-    responseBuffer.append(ret.str() + " ");
+    responseBuffer.append(to_string(returnCode) + " ");
     responseBuffer.append(errorPageMessage());
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Length: ");
-    std::string len = appropiateFileLength();
-    if (!len.empty())
-        responseBuffer.append(len);
+    std::string filePath = srv.errPages.find(returnCode)->second;
+    std::ifstream file(filePath.c_str());
+    if (!file.is_open())
+        std::cout << strerror(errno) << std::endl;
+    struct stat fileStat;
+    stat(filePath.c_str(), &fileStat);
+    responseBuffer.append(to_string(fileStat.st_size));
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Type: ");
     responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
     responseBuffer.append("\r\n");
     responseBuffer.append("\r\n");
-    std::string body = appropiateFileBody();
-    if (!body.empty())
-        responseBuffer.append(body);
-}
-
-void Response::sendResponse(void)
-{
-    formTheResponse();
-    std::cout << responseBuffer.size() << std::endl;
 }
 
 Response::~Response()

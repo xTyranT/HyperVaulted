@@ -6,15 +6,13 @@ class Response : public Request
 {
     public:
         std::string responseBuffer;
-        
+        std::ifstream file;
         Response();
         Response(const Response& other);
-        void formTheResponse(void);
-        void sendResponse(void);
-        std::string appropiateFileLength(void);
-        std::string appropiateFileBody(void);
+        void formTheResponse(Server& srv);
         void permanentRedirecting(void);
         void listDirFiles(std::string path);
-        void getMethod(Location& req);
+        void formChunkedResponse(Location& req, Server& srv);
+        void getMethod(Location& req, Server& srv);
         ~Response();
 };

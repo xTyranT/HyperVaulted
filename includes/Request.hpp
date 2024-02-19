@@ -30,7 +30,9 @@ class  Request
         std::pair<int, std::string> generateCorrespondingErrorPage(void);
         std::string errorPageMessage(void);
         bool pathURIChecker(std::string& URI);
+        void matchLocation(std::vector<Server>& srv, int whichServer);
         void printRequestComponents(void);
+        void openErrorPage(Server& srv);
         Location& matchURIWithLocation(std::vector<Server>& srv);
         ~Request(void);
 };

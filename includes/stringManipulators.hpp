@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <locale>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <limits.h>
 
 std::string to_string(int value);

@@ -19,6 +19,7 @@ std::vector<Server> getAvailableServers(std::ifstream& file)
 Location::Location(void)
 {
     path = std::string();
+    alias = std::string();
     methods = std::vector<std::string>();
     root = std::string();
     indexes = std::vector<std::string>();
@@ -61,6 +62,12 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         if (attr.size() != 2)
             throw std::invalid_argument("root must be one path");
         root = *(i + 1);
+    }
+    else if (*i == ALIAS)
+    {
+        if (attr.size() != 2)
+            throw std::invalid_argument("alias must be one path");
+        alias = *(i + 1);
     }
     else if (*i == INDEX)
     {
@@ -247,6 +254,8 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
         if (attr.size() != 2)
             throw std::invalid_argument("root must be one path");
         root = *(i + 1);
+        if (root.at(0) != '.')
+            throw std::invalid_argument("root must be a relative path");
     }
     else if (*i == SRVNAMES)
     {
@@ -274,13 +283,15 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
     }
     else if (*i == ERRPAGES)
     {
-        if (attr.size() != 2)
-            throw std::invalid_argument("error_page syntax: error_page <error_code>");
+        if (attr.size() != 3)
+            throw std::invalid_argument("error_page syntax: error_page <error_code> <error_page_path>");
         i++;
         int err = std::atoi(i->c_str());
         if (err < 1)
             throw std::invalid_argument("error code should not be negative");
-        errPages.insert(std::pair<int, std::string>(err, std::string()));
+        if ((i + 1)->substr(0, 2) != "./")
+            throw std::invalid_argument("error_page_path must be a relative path");
+        errPages.insert(std::pair<int, std::string>(err, *(i + 1)));
     }
     else if ( *i == LOCATION)
     {
@@ -380,6 +391,8 @@ void Server::serverBlock(std::ifstream& file)
     }
     if (!brackets.empty())
         throw std::invalid_argument("opened bracket not closed");
+    if (location.empty())
+        throw std::invalid_argument("server block must have at least one location block");
     checkAndSetNecessaryAttributes();
 }
 
