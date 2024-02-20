@@ -9,17 +9,20 @@ Client::Client()
     flag = false;
     chunksize = 0;
     contentlength = 0;
+    fd = 0;
 }
 
 Client & Client::operator= ( const Client & other )
 {
-    (void ) other;
-    read = false;
+    // (void ) other;
+    read = other.read;
     enf = false;
     sread = 0;
     flag = false;
-    chunksize = 0;
-    contentlength = 0;
+    chunksize = other.chunksize;
+    contentlength = other.contentlength;
+    reqRes = other.reqRes;
+    fd = other.fd;
     return *this;
 }
 
