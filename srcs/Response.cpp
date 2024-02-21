@@ -34,6 +34,7 @@ Response::Response(const Response& other) : Request(other)
 
 const Response& Response::operator=(const Response& other)
 {
+    Request::operator=(other);
     responseBuffer = other.responseBuffer;
     return *this;
 }
@@ -108,7 +109,7 @@ void Response::listDirFiles(std::string path)
     responseBuffer.append("\r\n");
     responseBuffer.append(tmp);
 }
-#include <signal.h>
+
 void Response::formChunkedResponse(Location& req, Server& srv)
 {
     std::string fullPath = req.root + Component.path;
@@ -150,6 +151,7 @@ void Response::getMethod(Location& req, Server& srv)
             std::cout << "IS DIRECTORY" << std::endl;
             if (Component.path[Component.path.size() - 1] != '/')
             {
+                std::cout << "REDIRECT" << std::endl;
                 returnCode = 301;
                 Component.path.append("/");
                 getMethod(req, srv);
@@ -157,12 +159,14 @@ void Response::getMethod(Location& req, Server& srv)
             }
             if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == true)
             {
+                std::cout << "AUTOINDEX" << std::endl;
                 returnCode = 200;
                 listDirFiles(req.root + Component.path);
                 return;
             }
             else if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == false)
             {
+                std::cout << "NO INDEX" << std::endl;
                 returnCode = 403;
                 openErrorPage(srv);
                 formTheResponse(srv);
@@ -170,6 +174,7 @@ void Response::getMethod(Location& req, Server& srv)
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == false)
             {
+                std::cout << "INDEX" << std::endl;
                 returnCode = 200;
                 Component.path.append(directoryHasIndex(req.root + Component.path, req));
                 formChunkedResponse(req, srv);
@@ -177,6 +182,7 @@ void Response::getMethod(Location& req, Server& srv)
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == true)
             {
+                std::cout << "CGI" << std::endl;
                 // run cgi on requested file with GET method
                 // return code depend on cgi
                 return;
@@ -184,10 +190,10 @@ void Response::getMethod(Location& req, Server& srv)
         }
         if (req.cgi == false)
         {
-            std::cout << fullPath << std::endl;
-            exit(0);;
-            std::ifstream file(fullPath.c_str());
-            if (!file.is_open())
+            std::cout << "NOT DIRECTORY" << std::endl;
+            struct stat fileStat;
+            stat((req.root + Component.path).c_str(), &fileStat);
+            if (fileStat.st_mode & S_IFDIR)
             {
                 returnCode = 404;
                 openErrorPage(srv);
@@ -196,18 +202,28 @@ void Response::getMethod(Location& req, Server& srv)
             }
             else
             {
-                returnCode = 200;
-                formChunkedResponse(req, srv);
-                return;
+                std::ifstream file((req.root + Component.path).c_str());
+                if (!file.is_open())
+                {
+                    returnCode = 404;
+                    openErrorPage(srv);
+                    formTheResponse(srv);
+                    return;
+                }
+                else
+                {
+                    returnCode = 200;
+                    formChunkedResponse(req, srv);
+                    return;
+                }
             }
-            returnCode = 200;
-            
             // return the requested file
         }
         else if (req.cgi == true)
         {
             // run cgi on requested file with GET method
             // return code depend on cgi 
+            return;
         }
     }
 }

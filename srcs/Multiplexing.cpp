@@ -94,7 +94,6 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
                         Clients[fd].reqRes.requestParser(Clients[fd].requestHeader, sv);
-                        // Clients[fd].parsedRequest.printRequestComponents();
                     }
                 }
                 else if (events[i].events & EPOLLOUT)

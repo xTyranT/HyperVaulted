@@ -18,3 +18,5 @@ class Response : public Request
         void formChunkedResponse(Location& req, Server& srv);
         void getMethod(Location& req, Server& srv);
 };
+
+std::string determineFileExtension(std::string fileName);
