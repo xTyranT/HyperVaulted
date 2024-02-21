@@ -16,11 +16,13 @@ class Location
         std::string uploadPath;
         std::vector<std::string> cgiPaths;
         std::map<int, std::string> ret;
+
         Location(void);
+        Location(const Location& other);
+        const Location& operator=(const Location& other);
+        ~Location(void);
         void checkAndStoreLocationAttributes(std::vector<std::string> attr);
         void checkNecessaryAttributes(void);
-        ~Location(void);
-
 };
 
 class Server
@@ -37,15 +39,21 @@ class Server
         std::vector<Location> location;
         std::vector<Location>::iterator l_i;
         int fd;
+
         Server(void);
+        Server(const Server& other);
+        const Server& operator=(const Server& other);
+        ~Server(void);
+        
         void checkAndSetNecessaryAttributes(void);
         void printServerAttributes(void);
         void checkAndStoreServerAttributes(std::vector<std::string> attr, std::ifstream& file);
         void serverBlock(std::ifstream& file);
         bool empty(void);
-        ~Server(void);
 };
 
 std::vector<Server> getAvailableServers(std::ifstream& file);
+void    multiplexing( std::vector<Server> & sv );
+void    Post( class Client & Clients , char *buff , int rd );
 void fillMimeTypes(void);
-void multiplexing( std::vector<Server> & sv );
+

@@ -10,6 +10,7 @@ class RequestLine
         std::string httpVersion;
 
         RequestLine(void);
+        RequestLine(const RequestLine& other);
         const RequestLine& operator=(const RequestLine& other);
         ~RequestLine(void);
 };
@@ -24,6 +25,9 @@ class  Request
 
         Request(void);
         Request(const Request& other);
+        const Request& operator=(const Request& other);
+        ~Request(void);
+
         std::string getRequest(void);
         void requestParser(std::string& request, std::vector<Server>& srv);
         int valueChecker(std::vector<Server>& srv);
@@ -34,5 +38,4 @@ class  Request
         void printRequestComponents(void);
         void openErrorPage(Server& srv);
         Location& matchURIWithLocation(std::vector<Server>& srv);
-        ~Request(void);
 };

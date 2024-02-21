@@ -7,6 +7,11 @@ RequestLine::RequestLine(void)
     httpVersion = std::string();
 }
 
+RequestLine::RequestLine(const RequestLine& other)
+{
+    *this = other;
+}
+
 const RequestLine& RequestLine::operator=(const RequestLine& other)
 {
     method = other.method;
@@ -14,7 +19,6 @@ const RequestLine& RequestLine::operator=(const RequestLine& other)
     httpVersion = other.httpVersion;
     return *this;
 }
-
 
 RequestLine::~RequestLine(void)
 {
@@ -28,12 +32,17 @@ Request::Request(void)
 
 Request::Request(const Request& other)
 {
+    *this = other;
+}
+
+const Request& Request::operator=(const Request& other)
+{
     Component = other.Component;
     httpHeaders = other.httpHeaders;
     returnCode = other.returnCode;
     sFd = other.sFd;
+    return *this;
 }
-
 
 bool Request::pathURIChecker(std::string& URI)
 {

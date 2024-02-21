@@ -29,7 +29,13 @@ Response::Response() : Request()
 
 Response::Response(const Response& other) : Request(other)
 {
+    *this = other;
+}
+
+const Response& Response::operator=(const Response& other)
+{
     responseBuffer = other.responseBuffer;
+    return *this;
 }
 
 std::string determineFileExtension(std::string fileName)
@@ -106,6 +112,7 @@ void Response::listDirFiles(std::string path)
 void Response::formChunkedResponse(Location& req, Server& srv)
 {
     std::string fullPath = req.root + Component.path;
+    std::ifstream file(fullPath.c_str());
     if (!file.is_open())
     {
         returnCode = 404;

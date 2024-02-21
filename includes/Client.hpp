@@ -7,11 +7,21 @@
 class   Client
 {   
     public:
-        int svfd;
+        int fd;
+        int chunksize;
+        int contentlength;
+        int sread;
+        std::string chunkedbuff;
         std::string request;
         std::string requestHeader;
+        std::string filename;
+        std::ofstream postFile;
         Response reqRes;
 
         bool read;
+        bool flag;
+        bool enf;
+        Client & operator= ( const Client & other );
+        Client (const Client & other );
         Client ();
-}; 
+};

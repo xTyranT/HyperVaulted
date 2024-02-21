@@ -31,6 +31,27 @@ Location::Location(void)
     ret = std::map<int, std::string>();
 }
 
+Location::Location(const Location& other)
+{
+    *this = other;
+}
+
+const Location& Location::operator=(const Location& other)
+{
+    path = other.path;
+    alias = other.alias;
+    methods = other.methods;
+    root = other.root;
+    indexes = other.indexes;
+    autoIndex = other.autoIndex;
+    upload = other.upload;
+    cgi = other.cgi;
+    uploadPath = other.uploadPath;
+    cgiPaths = other.cgiPaths;
+    ret = other.ret;
+    return *this;
+}
+
 void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
 {
     std::vector<std::string>::iterator i = attr.begin();
@@ -169,6 +190,26 @@ Server::Server(void)
     maxBodySize = long();
     location = std::vector<Location>();
     l_i = location.end();
+}
+
+Server::Server(const Server& other)
+{
+    *this = other;
+}
+
+const Server& Server::operator=(const Server& other)
+{
+    port = other.port;
+    host = other.host;
+    root = other.root;
+    indexes = other.indexes;
+    srvNames = other.srvNames;
+    errPages = other.errPages;
+    maxBodySize = other.maxBodySize;
+    location = other.location;
+    l_i = other.l_i;
+    fd = other.fd;
+    return *this;
 }
 
 bool Server::empty(void)

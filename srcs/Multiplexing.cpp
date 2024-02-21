@@ -11,11 +11,15 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     int len = sizeof( struct sockaddr_in);
 
     int cfd = accept( fd , reinterpret_cast< struct sockaddr * >(&newcon) , reinterpret_cast<socklen_t*>(&len));
-    std::cout << "new connection" << std::endl;
-    std::cout << "cfd " << cfd << std::endl;
     if ( cfd == -1 )
         std::cout << strerror(errno) << std::endl;
-    cl.svfd = fd;
+    cl.fd = cfd;
+    cl.reqRes.sFd = fd;
+    Clients[cfd] = cl;
+    fcntl(cfd, F_SETFL, O_NONBLOCK);
+    event.data.fd = cfd;
+    event.events = EPOLLIN | EPOLLOUT;
+
     if ( epoll_ctl( efd , EPOLL_CTL_ADD , cfd , &event) == -1 )
         std::cout << strerror(errno) << std::endl;
 
@@ -56,30 +60,36 @@ void    multiplexing( std::vector<Server> & sv )
     }
 
     while( 1 ){
-        
         int wp = epoll_wait(efd , events , MAX_EVENTS , -1);
         if (wp == -1)
             std::cout << "epoll_wait " << strerror(errno) << std::endl;
 
         for ( int i = 0  ; i < wp ; i++ ) 
         {
+            
             int fd = events[i].data.fd;
             std::vector<int>::iterator it = std::find(sfds.begin() , sfds.end(), fd);
             if ( it != sfds.end() )
                 accept_connection( efd , fd , Clients);
             else if (((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) ))
                         close(events[i].data.fd);
-            else if ( Clients.find(fd) != Clients.end())
+            else if ( events[i].events & EPOLLIN )
             {
                 memset(buff, 0 , 1024);
-                if ( events[i].events & EPOLLIN )
+
+                int rd = recv(fd, buff, 1023, 0);
+                if (!Clients[fd].flag)
+                    Clients[fd].sread = 0;
+                Clients[fd].sread += rd;
+                if ( rd == -1 )
                 {
-                    int rd = recv(fd, buff, 1023, 0);
-                    if ( rd == -1 )
-                        std::cout << "recv " << strerror(errno) << std::endl;
-                    Clients[fd].request.append(buff);
+                    std::cout << "recv " << strerror(errno) << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+                if ( !Clients[fd].read ){
+                    Clients[fd].request.append(buff, rd);
                     size_t find = Clients[fd].request.find("\r\n\r\n");
-                    if ( find != std::string::npos && !Clients[fd].read)
+                    if ( find != std::string::npos && !Clients[fd].read )
                     {
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
@@ -92,6 +102,7 @@ void    multiplexing( std::vector<Server> & sv )
                     
                 }
             }
+            
             
         }
     }

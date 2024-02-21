@@ -10,7 +10,7 @@ OBJSDIR = ./objs
 
 NAME = HyperVaulted
 
-SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp
+SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp Post.cpp
 
 UTIL_FILES = stringManipulators.cpp
 
@@ -22,8 +22,8 @@ UTILS_OBJS = $(addprefix $(OBJSDIR)/, $(UTIL_FILES:.cpp=.o))
 
 all : $(NAME)
 
-$(OBJSDIR):
-	mkdir -p $(OBJSDIR)
+$(OBJSDIR): 
+	mkdir -p $(OBJSDIR) 
 
 $(OBJSDIR)/%.o : $(SRCSDIR)/%.cpp | $(OBJSDIR)
 	$(CPP) $(CPPFLAGS) -c $< -o $@
@@ -36,6 +36,7 @@ $(NAME) : $(OBJS) $(UTILS_OBJS)
 
 clean :
 	rm -rf $(OBJS) $(UTILS_OBJS)
+	rm -rf ./upload/*
 
 fclean : clean
 	rm -rf $(NAME)
