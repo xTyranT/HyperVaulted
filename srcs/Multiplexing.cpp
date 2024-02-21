@@ -16,13 +16,6 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     if ( cfd == -1 )
         std::cout << strerror(errno) << std::endl;
     cl.svfd = fd;
-    cl.reqRes.sFd = fd;
-    (void)Clients;
-    // Clients[cfd] = cl;
-    fcntl(cfd, F_SETFL, O_NONBLOCK);
-    event.data.fd = cfd;
-    event.events = EPOLLIN | EPOLLOUT;
-
     if ( epoll_ctl( efd , EPOLL_CTL_ADD , cfd , &event) == -1 )
         std::cout << strerror(errno) << std::endl;
 
