@@ -4,10 +4,7 @@
 
 class Response : public Request
 {
-    public:
-        std::string responseBuffer;
-        std::string file;
-
+    public:        
         Response();
         Response(const Response& other);
         const Response& operator=(const Response& other);

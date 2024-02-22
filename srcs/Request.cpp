@@ -176,8 +176,9 @@ void Request::openErrorPage(Server& srv)
     std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
     if (i != srv.errPages.end())
     {
-        std::ifstream file(i->second.c_str());
-        if (file.is_open())
+        std::cout << i->second << std::endl;
+        std::ifstream openFile(i->second.c_str());
+        if (openFile.is_open())
         {
             struct stat fileStat;
             stat(i->second.c_str(), &fileStat);
@@ -192,13 +193,20 @@ void Request::openErrorPage(Server& srv)
             res.responseBuffer.append(determineFileExtension(i->second));
             res.responseBuffer.append("\r\n");
             res.file = i->second;
+            return;
         }
-        std::cout << strerror(errno) << std::endl;
-        exit(EXIT_FAILURE);
+        else
+        {
+            generateCorrespondingErrorPage();
+            file = "./ErrorPages/" + to_string(returnCode) + ".html";
+            srv.errPages.erase(returnCode);
+            return;
+        }
     }
     else
     {
         generateCorrespondingErrorPage();
+        file = "./ErrorPages/" + to_string(returnCode) + ".html";
         srv.errPages.erase(returnCode);
         return;
     }
@@ -248,6 +256,8 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
+    std::cout << request << std::endl;
+    // exit(0);;
     std::cout << "REQUEST PARSER" << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)

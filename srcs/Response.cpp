@@ -113,8 +113,8 @@ void Response::listDirFiles(std::string path)
 void Response::formChunkedResponse(Location& req, Server& srv)
 {
     std::string fullPath = req.root + Component.path;
-    std::ifstream file(fullPath.c_str());
-    if (!file.is_open())
+    std::ifstream openedFile(fullPath.c_str());
+    if (!openedFile.is_open())
     {
         returnCode = 404;
         openErrorPage(srv);
@@ -129,6 +129,7 @@ void Response::formChunkedResponse(Location& req, Server& srv)
     struct stat fileStat;
     stat(fullPath.c_str(), &fileStat);
     responseBuffer.append("\r\nContent Length: " + to_string(fileStat.st_size) + "\r\n");
+    file = fullPath;
 }
 
 void Response::getMethod(Location& req, Server& srv)
