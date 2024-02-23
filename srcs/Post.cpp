@@ -4,6 +4,7 @@
 #include <cmath>
 
 int x = 1;
+extern std::map<std::string, std::string>  mimeTypes;
 
 int htd( std::string str )
 {
@@ -27,7 +28,15 @@ std::string itos()
 
 std::string gnExtencion( std::string contentType )
 {
-    std::string s =  itos() + contentType.substr(contentType.find("/") + 1);
+    std::map<std::string, std::string>::iterator i;
+    std::string ct = contentType.substr(contentType.find("/") + 1);
+    std::string ex;
+    for ( i = mimeTypes.begin() ; i != mimeTypes.end(); i++ )
+    {
+        if ( ct == i->second)
+            ex = i->first;
+    }
+    std::string s =  itos() + ex;
     return s;
 }
 
