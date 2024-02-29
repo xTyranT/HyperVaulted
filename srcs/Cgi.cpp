@@ -31,7 +31,7 @@ void Cgi::cgiCaller(Server& srv, Location& req)
     pid = fork();
     if (pid == 0)
     {
-        // execve(req.getCgiPath().c_str(), NULL, NULL);
+        // execve(std::find(req.cgiPaths), NULL, NULL);
     }
     else if (pid < 0)
     {

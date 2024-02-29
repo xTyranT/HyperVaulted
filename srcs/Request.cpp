@@ -175,50 +175,6 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
     throw std::invalid_argument("no match");
 }
 
-void Request::openErrorPage(Server& srv)
-{
-    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
-    std::cout << "OPEN ERROR PAGE" << std::endl;
-    if (i != srv.errPages.end())
-    {
-        std::cout << "PATH: " << i->second << std::endl;
-        std::ifstream openFile(i->second.c_str());
-        if (openFile.is_open())
-        {
-            std::cout << "OPEN FILE" << std::endl;
-            struct stat fileStat;
-            stat(i->second.c_str(), &fileStat);
-            Response& res = static_cast<Response&>(*this);
-            res.responseBuffer.append(Component.httpVersion + " ");
-            res.responseBuffer.append(to_string(returnCode) + " ");
-            res.responseBuffer.append(errorPageMessage() + "\r\n");
-            res.responseBuffer.append("Content-Length: ");
-            res.responseBuffer.append(to_string(fileStat.st_size));
-            res.responseBuffer.append("\r\n");
-            res.responseBuffer.append("Content-Type: ");
-            res.responseBuffer.append(determineFileExtension(i->second));
-            res.responseBuffer.append("\r\n");
-            res.file = i->second;
-            return;
-        }
-        else
-        {
-            generateCorrespondingErrorPage();
-            file = "./ErrorPages/" + to_string(returnCode) + ".html";
-            srv.errPages.erase(returnCode);
-            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
-            return;
-        }
-    }
-    else
-    {
-        generateCorrespondingErrorPage();
-        file = "./ErrorPages/" + to_string(returnCode) + ".html";
-        srv.errPages.erase(returnCode);
-        return;
-    }
-}
-
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
     std::cout << "MATCH LOCATION" << std::endl;
@@ -241,16 +197,14 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
             if (i == match.methods.end())
             {
                 returnCode = 405;
-                openErrorPage(srv[whichServer]);
                 Response& res = static_cast<Response&>(*this);
-                std::cout << "METHOD NOT ALLOWED\n";
+                res.openErrorPage(srv[whichServer]);
                 res.formTheResponse(srv[whichServer]);
             }
             else
             {
                 std::cout << "METHOD ALLOWED\n";
                 Response& res = static_cast<Response&>(*this);
-                std::cout << "METHOD: " << Component.method << std::endl;
                 if (Component.method == "GET")
                     res.getMethod(match, srv[whichServer]);
                 else if (Component.method == "DELETE")
@@ -265,8 +219,8 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
         std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
         if (absPath != "/")
             returnCode = 404;
-        std::cout << srv[whichServer].errPages.size() << std::endl;
-        openErrorPage(srv[whichServer]);
+        Response& res = static_cast<Response&>(*this);
+        res.openErrorPage(srv[whichServer]);
     }
 }
 
@@ -306,9 +260,8 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
     returnCode = valueChecker(srv);
     if (returnCode != 200)
     {
-        std::cout << "Error\n";
-        openErrorPage(srv[whichServer]);
         Response& res = static_cast<Response&>(*this);
+        res.openErrorPage(srv[whichServer]);
         res.formTheResponse(srv[whichServer]);
         return;
     }

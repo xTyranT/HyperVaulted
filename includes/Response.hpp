@@ -15,6 +15,7 @@ class Response : public Request
         void formChunkedResponse(Location& req, Server& srv);
         void getMethod(Location& req, Server& srv);
         void deleteMethod(Location& req, Server& srv);
+        void openErrorPage(Server& srv);
         void deleteDirectory(std::string path, Location& req, Server& srv);
 };
 

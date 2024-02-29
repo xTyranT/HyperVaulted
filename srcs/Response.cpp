@@ -229,6 +229,49 @@ void Response::getMethod(Location& req, Server& srv)
     }
 }
 
+void Response::openErrorPage(Server& srv)
+{
+    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
+    std::cout << "OPEN ERROR PAGE" << std::endl;
+    if (i != srv.errPages.end())
+    {
+        std::cout << "PATH: " << i->second << std::endl;
+        std::ifstream openFile(i->second.c_str());
+        if (openFile.is_open())
+        {
+            std::cout << "OPEN FILE" << std::endl;
+            struct stat fileStat;
+            stat(i->second.c_str(), &fileStat);
+            responseBuffer.append(Component.httpVersion + " ");
+            responseBuffer.append(to_string(returnCode) + " ");
+            responseBuffer.append(errorPageMessage() + "\r\n");
+            responseBuffer.append("Content-Length: ");
+            responseBuffer.append(to_string(fileStat.st_size));
+            responseBuffer.append("\r\n");
+            responseBuffer.append("Content-Type: ");
+            responseBuffer.append(determineFileExtension(i->second));
+            responseBuffer.append("\r\n");
+            file = i->second;
+            return;
+        }
+        else
+        {
+            generateCorrespondingErrorPage();
+            file = "./ErrorPages/" + to_string(returnCode) + ".html";
+            srv.errPages.erase(returnCode);
+            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
+            return;
+        }
+    }
+    else
+    {
+        generateCorrespondingErrorPage();
+        file = "./ErrorPages/" + to_string(returnCode) + ".html";
+        srv.errPages.erase(returnCode);
+        return;
+    }
+}
+
 bool emptyDirectory(std::string path)
 {
     DIR* directory = opendir(path.c_str());
