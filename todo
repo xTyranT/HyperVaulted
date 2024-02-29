@@ -1,0 +1,3 @@
+cgi
+response type content length
+if required path is directory let the multiplexing side know

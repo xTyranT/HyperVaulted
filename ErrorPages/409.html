@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conflict</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      background: url('https://wallpaperset.com/w/full/4/e/d/427170.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+    }
+
+    .container {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 4em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    p {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+
+    a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .glitch {
+      position: relative;
+      display: inline-block;
+    }
+
+    .glitch::before, .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      clip: rect(0, 900px, 0, 0);
+      z-index: -1;
+    }
+
+    .glitch::before {
+      color: #e74c3c;
+      animation: glitch 0.3s infinite;
+    }
+
+    .glitch::after {
+      color: #3498db;
+      animation: glitch 0.3s infinite;
+      animation-delay: 0.15s;
+    }
+
+    .rainbow {
+      font-size: 1.5em;
+      background: linear-gradient(45deg, #e74c3c, #f39c12, #2ecc71, #3498db, #9b59b6);
+      background-size: 200% 200%;
+      color: transparent;
+      background-clip: text;
+      animation: rainbowAnimation 5s infinite;
+    }
+
+    @keyframes rainbowAnimation {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    @keyframes gradientAnimation {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: url('https://wallpaperset.com/w/full/4/e/d/427170.jpg') no-repeat center center fixed;
+      background-size: cover;
+      animation: gradientAnimation 10s infinite;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="glitch" data-text="Conflict">Conflict</h1>
+    <p class="rainbow">Lost in the cosmic void...</p>
+  </div>
+</body>
+</html>
