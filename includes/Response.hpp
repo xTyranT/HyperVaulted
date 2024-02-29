@@ -4,10 +4,7 @@
 
 class Response : public Request
 {
-    public:
-        std::string responseBuffer;
-        std::string file;
-
+    public:        
         Response();
         Response(const Response& other);
         const Response& operator=(const Response& other);
@@ -18,3 +15,5 @@ class Response : public Request
         void formChunkedResponse(Location& req, Server& srv);
         void getMethod(Location& req, Server& srv);
 };
+
+std::string determineFileExtension(std::string fileName);

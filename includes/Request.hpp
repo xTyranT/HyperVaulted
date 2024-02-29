@@ -22,6 +22,8 @@ class  Request
         std::map<std::string, std::string>  httpHeaders;
         int returnCode;
         int sFd;
+        std::string file;
+        std::string responseBuffer;
 
         Request(void);
         Request(const Request& other);

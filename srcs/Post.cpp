@@ -29,12 +29,14 @@ std::string itos()
 std::string gnExtencion( std::string contentType )
 {
     std::map<std::string, std::string>::iterator i;
-    std::string ct = contentType.substr(contentType.find("/") + 1);
     std::string ex;
     for ( i = mimeTypes.begin() ; i != mimeTypes.end(); i++ )
     {
-        if ( ct == i->second)
+        if ( contentType == i->second){
+
             ex = i->first;
+            break;
+        }
     }
     std::string s =  itos() + ex;
     return s;
@@ -48,7 +50,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     {
         Clients.flag = true;
         std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);
-        Clients.postFile.open(fname.c_str(), std::ios::app | std::ios::binary);
+        Clients.postFile.open(fname.c_str(), std::ios::app );
         find = Clients.request.find("\r\n");
         str  = Clients.request.substr(0 , find);
         Clients.chunksize = htd( str );
@@ -78,6 +80,8 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     }
     if ( Clients.chunksize == 0 )
     {
+        Clients.reqRes.returnCode = 201;
+        // Clients.reqRes.formTheResponse
         std::cout << "here" << std::endl;
         Clients.enf = true;
         Clients.postFile.close();
@@ -102,7 +106,7 @@ void    Post( Client & Clients , char *buff , int rd )
     else if ( !Clients.flag )
     {
         std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);;
-        Clients.postFile.open(fname.c_str(), std::ios::app | std::ios::binary);
+        Clients.postFile.open(fname.c_str(), std::ios::app );
         Clients.postFile.write(Clients.request.c_str(), Clients.request.size());
         Clients.flag = true;
         Clients.contentlength = atoi(Clients.reqRes.httpHeaders["Content-Length"].c_str());
@@ -113,6 +117,7 @@ void    Post( Client & Clients , char *buff , int rd )
     }
     if ( Clients.sread == Clients.contentlength )
     {
+        Clients.reqRes.returnCode = 201;
         std::cout << "here1" << std::endl;
         Clients.enf = true;
         Clients.postFile.close();

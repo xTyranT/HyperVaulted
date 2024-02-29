@@ -7,6 +7,7 @@ Client::Client()
     enf = false;
     sread = 0;
     flag = false;
+    resred = false;
     chunksize = 0;
     contentlength = 0;
     fd = 0;
@@ -14,11 +15,10 @@ Client::Client()
 
 Client & Client::operator= ( const Client & other )
 {
-    // (void ) other;
     read = other.read;
-    enf = false;
-    sread = 0;
-    flag = false;
+    enf = other.enf;
+    sread = other.sread;
+    flag = other.flag;
     chunksize = other.chunksize;
     contentlength = other.contentlength;
     reqRes = other.reqRes;

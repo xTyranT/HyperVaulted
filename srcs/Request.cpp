@@ -26,8 +26,12 @@ RequestLine::~RequestLine(void)
 }
 
 Request::Request(void)
-{ 
+{
+    Component = RequestLine();
     httpHeaders = std::map<std::string, std::string>();
+    returnCode = -1;
+    sFd = -1;
+
 }
 
 Request::Request(const Request& other)
@@ -63,8 +67,8 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 400;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    if (Component.method == "POST" && httpHeaders.find("Content-Length") == httpHeaders.end())
-        return 400;
+    // if (Component.method == "POST" && httpHeaders.find("Content-Length") == httpHeaders.end())
+    //     return 400;
     if (pathURIChecker(Component.path))
         return 400;
     if (Component.path.size() > 2048)
@@ -99,6 +103,8 @@ std::string Request::errorPageMessage(void)
         return std::string("Request Entity Too Large");
     if (returnCode == 200)
         return std::string("OK");
+    if (returnCode == 201)
+        return std::string("Created");
     return std::string();
 }
 
@@ -106,8 +112,8 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 {
     if (returnCode != 200 && returnCode != 301)
     {
-        std::string fileName = "/home/tyrant/webserv/ErrorPages/" + to_string(returnCode) + ".html";
-        std::ifstream content("/home/tyrant/webserv/ErrorPages/error_page.html");
+        std::string fileName = "/home/hamdani/webserv/ErrorPages/" + to_string(returnCode) + ".html";
+        std::ifstream content("/home/hamdani/webserv/ErrorPages/error_page.html");
         if (!content.is_open())
             std::cout << strerror(errno) << std::endl;
         std::stringstream file;
@@ -136,12 +142,30 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
         {
             if (!i->location.empty())
             {
-                std::vector<Location>::iterator j;
-                for (j = i->location.begin(); j != i->location.end(); j++)
+                std::string fullPath = i->root + Component.path;
+                DIR *dir = opendir(fullPath.c_str());
+                if (dir)
                 {
+                    std::vector<Location>::iterator j;
+                    for (j = i->location.begin(); j != i->location.end(); j++)
+                    {
+                        if (Component.path == j->path)
+                        {
+                            closedir(dir);
+                            return *j;
+                        }
+                    }
+                }
+                else if (!dir)
+                {
+                    closedir(dir);
                     std::string absPath = Component.path.substr(0, Component.path.rfind('/'));
-                    if (absPath != "/" && absPath == j->path)
-                        return *j;
+                    std::vector<Location>::iterator j;
+                    for (j = i->location.begin(); j != i->location.end(); j++)
+                    {
+                        if (absPath == j->path)
+                            return *j;
+                    }
                 }
             }
         }
@@ -151,58 +175,91 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
 
 void Request::openErrorPage(Server& srv)
 {
-    std::ifstream file(srv.errPages[returnCode].c_str());
-    if (!file.is_open())
+    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
+    if (i != srv.errPages.end())
+    {
+        std::cout << i->second << std::endl;
+        std::ifstream openFile(i->second.c_str());
+        if (openFile.is_open())
+        {
+            struct stat fileStat;
+            stat(i->second.c_str(), &fileStat);
+            Response& res = static_cast<Response&>(*this);
+            res.responseBuffer.append(Component.httpVersion + " ");
+            res.responseBuffer.append(to_string(returnCode) + " ");
+            res.responseBuffer.append(errorPageMessage() + "\r\n");
+            res.responseBuffer.append("Content-Length: ");
+            res.responseBuffer.append(to_string(fileStat.st_size));
+            res.responseBuffer.append("\r\n");
+            res.responseBuffer.append("Content-Type: ");
+            res.responseBuffer.append(determineFileExtension(i->second));
+            res.responseBuffer.append("\r\n");
+            res.file = i->second;
+            return;
+        }
+        else
+        {
+            generateCorrespondingErrorPage();
+            file = "./ErrorPages/" + to_string(returnCode) + ".html";
+            srv.errPages.erase(returnCode);
+            return;
+        }
+    }
+    else
     {
         generateCorrespondingErrorPage();
+        file = "./ErrorPages/" + to_string(returnCode) + ".html";
         srv.errPages.erase(returnCode);
         return;
     }
-    
 }
 
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
     Location match;
-        try
+    try
+    {
+        match = matchURIWithLocation(srv);
+        if (!match.ret.empty())
         {
-            match = matchURIWithLocation(srv);
-            if (!match.ret.empty())
+            Response& res = static_cast<Response&>(*this);
+            returnCode = 301;
+            res.matchLocation(srv, whichServer);
+            return;
+        }
+        else
+        {
+            std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
+            if (i == match.methods.end())
             {
+                returnCode = 405;
+                openErrorPage(srv[whichServer]);
                 Response& res = static_cast<Response&>(*this);
-                returnCode = 301;
-                res.matchLocation(srv, whichServer);
-                return;
+                res.formTheResponse(srv[whichServer]);
             }
             else
             {
-                std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
-                if (i == match.methods.end())
-                {
-                    returnCode = 405;
-                    openErrorPage(srv[whichServer]);
-                    Response& res = static_cast<Response&>(*this);
-                    res.formTheResponse(srv[whichServer]);
-                }
-                else
-                {
-                    Response& res = static_cast<Response&>(*this);
-                    if (Component.method == "GET")
-                        res.getMethod(match, srv[whichServer]);
-                }
+                Response& res = static_cast<Response&>(*this);
+                if (Component.method == "GET")
+                    res.getMethod(match, srv[whichServer]);
             }
+        }
     }
     catch(const std::exception& e)
     {
+        std::cout << e.what() << std::endl;
         std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
         if (absPath != "/")
             returnCode = 404;
+        std::cout << srv[whichServer].errPages.size() << std::endl;
         openErrorPage(srv[whichServer]);
     }
 }
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
+    // std::cout << request << std::endl;
+    // exit(0);;
     std::cout << "REQUEST PARSER" << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
@@ -235,11 +292,13 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
     returnCode = valueChecker(srv);
+    std::cout << returnCode << std::endl;
     if (returnCode != 200)
     {
         openErrorPage(srv[whichServer]);
         Response& res = static_cast<Response&>(*this);
         res.formTheResponse(srv[whichServer]);
+        std::cout << "here " << std::endl;
         return;
     }
     else if (returnCode == 200)

@@ -11,8 +11,8 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     int len = sizeof( struct sockaddr_in);
 
     int cfd = accept( fd , reinterpret_cast< struct sockaddr * >(&newcon) , reinterpret_cast<socklen_t*>(&len));
-    std::cout << "new connection" << std::endl;
-    std::cout << "cfd " << cfd << std::endl;
+    // std::cout << "new connection" << std::endl;
+    // std::cout << "cfd " << cfd << std::endl;
     if ( cfd == -1 )
         std::cout << strerror(errno) << std::endl;
     cl.fd = cfd;
@@ -97,8 +97,8 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
                         Clients[fd].reqRes.requestParser(Clients[fd].requestHeader, sv);
                         Clients[fd].request = Clients[fd].request.erase(0, find + 4);
-                        std::cout << Clients[fd].fd << "  " << Clients[fd].reqRes.sFd << std::endl;
                         Clients[fd].sread -= find + 4;
+                        // std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
                     }
                 }
                 if ( Clients[fd].reqRes.Component.method == "POST" && !Clients[fd].enf)
@@ -108,7 +108,26 @@ void    multiplexing( std::vector<Server> & sv )
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
             {
-                 
+                // std::cout << "here " << std::endl;
+               if( !Clients[fd].resred )
+               {
+                    Clients[fd].resred = true;
+                    Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                    write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
+                    std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
+               }
+               else{
+                    memset(buff, 0 , 1024);
+                    Clients[fd].resFile.read(buff , 1023);
+                    write(fd, buff, Clients[fd].resFile.gcount());
+                    std::cout << buff << std::endl;
+                    // int r =  recv( Clients[fd].resFile , buff , 1023 , 0):
+               }
+               if ( Clients[fd].resFile.eof())
+               {
+                    close(Clients[fd].fd);
+                    Clients.erase(fd);
+               }
             }
             
         }

@@ -16,11 +16,13 @@ class   Client
         std::string requestHeader;
         std::string filename;
         std::ofstream postFile;
+        std::ifstream resFile;
         Response reqRes;
 
         bool read;
         bool flag;
         bool enf;
+        bool resred;
         Client & operator= ( const Client & other );
         Client (const Client & other );
         Client ();

@@ -340,6 +340,8 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
             throw std::invalid_argument("location must have one path");
         Location tmp;
         tmp.path = *(i + 1);
+        if (tmp.path.at(0) != '/' || tmp.path.at(tmp.path.size() - 1) == '/')
+            throw std::invalid_argument("location path must start with / and not end with /");
         std::string line;
         std::getline(file, line);
         line.erase(remove(line.begin(), line.end(), ' '), line.end());
