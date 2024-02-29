@@ -7,6 +7,7 @@
 class   Client
 {   
     public:
+    int sfd;
         int fd;
         int chunksize;
         int contentlength;

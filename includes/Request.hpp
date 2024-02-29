@@ -24,6 +24,7 @@ class  Request
         int sFd;
         std::string file;
         std::string responseBuffer;
+        Location matchedLocation;
 
         Request(void);
         Request(const Request& other);
@@ -38,6 +39,5 @@ class  Request
         bool pathURIChecker(std::string& URI);
         void matchLocation(std::vector<Server>& srv, int whichServer);
         void printRequestComponents(void);
-        void openErrorPage(Server& srv);
         Location& matchURIWithLocation(std::vector<Server>& srv);
 };

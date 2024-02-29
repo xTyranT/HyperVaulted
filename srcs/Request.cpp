@@ -67,8 +67,6 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 400;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    // if (Component.method == "POST" && httpHeaders.find("Content-Length") == httpHeaders.end())
-    //     return 400;
     if (pathURIChecker(Component.path))
         return 400;
     if (Component.path.size() > 2048)
@@ -99,6 +97,10 @@ std::string Request::errorPageMessage(void)
         return std::string("Not Found");
     if (returnCode == 501)
         return std::string("Not Implemented");
+    if (returnCode == 500)
+        return std::string("Internal Server Error");
+    if (returnCode == 409)
+        return std::string("Conflict");
     if (returnCode == 413)
         return std::string("Request Entity Too Large");
     if (returnCode == 200)
@@ -119,7 +121,6 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
         std::stringstream file;
         file << content.rdbuf();
         std::string buffer = file.str();
-
         size_t pos = buffer.find("TEMPLATE-TEXT-HERE");
         while (pos != std::string::npos)
         {
@@ -136,6 +137,7 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 Location& Request::matchURIWithLocation(std::vector<Server>& srv)
 {
     std::vector<Server>::iterator i;
+    std::cout << "component path: " << Component.path << std::endl;
     for (i = srv.begin(); i != srv.end(); i++)
     {
         if (sFd == i->fd)
@@ -176,12 +178,14 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
 void Request::openErrorPage(Server& srv)
 {
     std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
+    std::cout << "OPEN ERROR PAGE" << std::endl;
     if (i != srv.errPages.end())
     {
-        std::cout << i->second << std::endl;
+        std::cout << "PATH: " << i->second << std::endl;
         std::ifstream openFile(i->second.c_str());
         if (openFile.is_open())
         {
+            std::cout << "OPEN FILE" << std::endl;
             struct stat fileStat;
             stat(i->second.c_str(), &fileStat);
             Response& res = static_cast<Response&>(*this);
@@ -202,6 +206,7 @@ void Request::openErrorPage(Server& srv)
             generateCorrespondingErrorPage();
             file = "./ErrorPages/" + to_string(returnCode) + ".html";
             srv.errPages.erase(returnCode);
+            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
             return;
         }
     }
@@ -216,12 +221,15 @@ void Request::openErrorPage(Server& srv)
 
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
+    std::cout << "MATCH LOCATION" << std::endl;
     Location match;
     try
     {
         match = matchURIWithLocation(srv);
+        matchedLocation = match
         if (!match.ret.empty())
         {
+            std::cout << "MATCH RET" << std::endl;
             Response& res = static_cast<Response&>(*this);
             returnCode = 301;
             res.matchLocation(srv, whichServer);
@@ -229,19 +237,26 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
         }
         else
         {
+            std::cout << "MATCH METHOD" << std::endl;
             std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
             if (i == match.methods.end())
             {
                 returnCode = 405;
                 openErrorPage(srv[whichServer]);
                 Response& res = static_cast<Response&>(*this);
+                std::cout << "METHOD NOT ALLOWED\n";
                 res.formTheResponse(srv[whichServer]);
             }
             else
             {
+                std::cout << "METHOD ALLOWED\n";
                 Response& res = static_cast<Response&>(*this);
+                std::cout << "METHOD: " << Component.method << std::endl;
                 if (Component.method == "GET")
                     res.getMethod(match, srv[whichServer]);
+                else if (Component.method == "DELETE")
+                    res.deleteMethod(match, srv[whichServer]);
+                return;
             }
         }
     }
@@ -258,8 +273,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
-    // std::cout << request << std::endl;
-    // exit(0);;
     std::cout << "REQUEST PARSER" << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
@@ -295,6 +308,7 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
     std::cout << returnCode << std::endl;
     if (returnCode != 200)
     {
+        std::cout << "Error\n";
         openErrorPage(srv[whichServer]);
         Response& res = static_cast<Response&>(*this);
         res.formTheResponse(srv[whichServer]);

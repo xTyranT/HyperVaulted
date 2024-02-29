@@ -22,11 +22,12 @@
 #include <stdio.h>
 #include <errno.h>
 #include <netinet/in.h>
-#include <sys/types.h>
 #include <dirent.h>
 #include <iomanip>
 #include <locale>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 #include <limits.h>
 

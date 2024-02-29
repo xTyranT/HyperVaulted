@@ -119,7 +119,7 @@ void Response::formChunkedResponse(Location& req, Server& srv)
     {
         returnCode = 404;
         openErrorPage(srv);
-        formTheResponse(srv);
+        // formTheResponse(srv);
         return;
     }
     responseBuffer.append(Component.httpVersion + " ");
@@ -144,7 +144,7 @@ void Response::getMethod(Location& req, Server& srv)
         closedir(directory);
         returnCode = 404;
         openErrorPage(srv);
-        formTheResponse(srv);
+        // formTheResponse(srv);
     }
     else
     {
@@ -171,7 +171,7 @@ void Response::getMethod(Location& req, Server& srv)
                 std::cout << "NO INDEX" << std::endl;
                 returnCode = 403;
                 openErrorPage(srv);
-                formTheResponse(srv);
+                // formTheResponse(srv);
                 return;
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == false)
@@ -199,7 +199,7 @@ void Response::getMethod(Location& req, Server& srv)
             {
                 returnCode = 404;
                 openErrorPage(srv);
-                formTheResponse(srv);
+                // formTheResponse(srv);
                 return;
             }
             else
@@ -209,7 +209,7 @@ void Response::getMethod(Location& req, Server& srv)
                 {
                     returnCode = 404;
                     openErrorPage(srv);
-                    formTheResponse(srv);
+                    // formTheResponse(srv);
                     return;
                 }
                 else
@@ -230,6 +230,144 @@ void Response::getMethod(Location& req, Server& srv)
     }
 }
 
+bool emptyDirectory(std::string path)
+{
+    DIR* directory = opendir(path.c_str());
+    struct dirent* entry;
+    while ((entry = readdir(directory)) != NULL)
+    {
+        if (entry->d_name[0] == '.')
+            continue;
+        closedir(directory);
+        return false;
+    }
+    closedir(directory);
+    return true;
+}
+
+void esponse::openErrorPage(Server& srv)
+{
+    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
+    std::cout << "OPEN ERROR PAGE" << std::endl;
+    if (i != srv.errPages.end())
+    {
+        std::cout << "PATH: " << i->second << std::endl;
+        std::ifstream openFile(i->second.c_str());
+        if (openFile.is_open())
+        {
+            std::cout << "OPEN FILE" << std::endl;
+            struct stat fileStat;
+            stat(i->second.c_str(), &fileStat);
+            Response& res = static_cast<Response&>(*this);
+            res.responseBuffer.append(Component.httpVersion + " ");
+            res.responseBuffer.append(to_string(returnCode) + " ");
+            res.responseBuffer.append(errorPageMessage() + "\r\n");
+            res.responseBuffer.append("Content-Length: ");
+            res.responseBuffer.append(to_string(fileStat.st_size));
+            res.responseBuffer.append("\r\n");
+            res.responseBuffer.append("Content-Type: ");
+            res.responseBuffer.append(determineFileExtension(i->second));
+            res.responseBuffer.append("\r\n\r\n");
+            res.file = i->second;
+            return;
+        }
+        else
+        {
+            generateCorrespondingErrorPage();
+            file = "./ErrorPages/" + to_string(returnCode) + ".html";
+            srv.errPages.erase(returnCode);
+            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
+            return;
+        }
+    }
+    else
+    {
+        generateCorrespondingErrorPage();
+        file = "./ErrorPages/" + to_string(returnCode) + ".html";
+        srv.errPages.erase(returnCode);
+        return;
+    }
+}
+
+void Response::deleteDirectory(std::string path, Location& req, Server& srv)
+{
+    DIR* directory = opendir(path.c_str());
+    struct dirent* entry;
+    while ((entry = readdir(directory)) != NULL)
+    {
+        if (entry->d_name[0] == '.')
+            continue;
+        if (isDirectory(path + "/" + entry->d_name))
+        {
+            deleteDirectory(path + "/" + entry->d_name, req, srv);
+            if (!emptyDirectory(path + "/" + entry->d_name))
+            {
+                returnCode = 403;
+                openErrorPage(srv);
+                // formTheResponse(srv);
+                return;
+            }
+            rmdir((path + "/" + entry->d_name).c_str());
+            returnCode = 204;
+            return;
+        }
+        else
+        {
+            if (remove((path + "/" + entry->d_name).c_str()) == -1)
+            {
+                returnCode = 403;
+                openErrorPage(srv);
+                // formTheResponse(srv);
+                return;
+            }
+            returnCode = 204;
+        }
+    }
+    closedir(directory);
+    returnCode = 204;
+}
+
+void Response::deleteMethod(Location& req, Server& srv)
+{
+    std::cout << "DELETE METHOD" << std::endl;
+    std::string fullPath = req.root + Component.path;
+    if (!validPath(fullPath))
+    {
+        std::cout << "INVALID PATH" << std::endl;
+        returnCode = 404;
+        openErrorPage(srv);
+        // formTheResponse(srv);
+        return;
+    }
+    if (isDirectory(fullPath))
+    {
+        std::cout << "IS DIRECTORY" << std::endl;
+        if (Component.path[Component.path.size() - 1] != '/')
+        {
+            std::cout << "REDIRECT" << std::endl;
+            returnCode = 409;
+            openErrorPage(srv);
+            // formTheResponse(srv);
+            return;
+        }
+        else
+        {
+            std::cout << "DIRECTORY" << std::endl;
+            if (req.cgi == true)
+            {
+                // run cgi on requested file with DELETE method
+                // return code depend on cgi
+                return;
+            }
+            else if (req.cgi == false)
+            {
+                deleteDirectory(fullPath, req, srv);
+                returnCode = 204;
+            }
+        }
+    }
+}
+
 void Response::formTheResponse(Server& srv)
 {
     responseBuffer.append(Component.httpVersion);
@@ -238,7 +376,13 @@ void Response::formTheResponse(Server& srv)
     responseBuffer.append(errorPageMessage());
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Length: ");
-    std::string filePath = srv.errPages.find(returnCode)->second;
+    std::string filePath;
+    std::cout << srv.errPages.size() << std::endl;
+    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
+    if (i != srv.errPages.end())
+        filePath = i->second;
+    else
+        filePath = generateCorrespondingErrorPage().second;
     std::ifstream file(filePath.c_str());
     if (!file.is_open())
         std::cout << strerror(errno) << std::endl;
@@ -248,8 +392,7 @@ void Response::formTheResponse(Server& srv)
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Type: ");
     responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
-    responseBuffer.append("\r\n");
-    responseBuffer.append("\r\n");
+    responseBuffer.append("\r\n\r\n");
 }
 
 Response::~Response()

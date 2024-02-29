@@ -19,14 +19,14 @@ int htd( std::string str )
 
 std::string itos()
 {
-    std::string name = "./upload/upload";
+    std::string name = "/upload";
     std::stringstream s;
     s << name << x  << '.' ;
     x++;
     return s.str();
 }
 
-std::string gnExtencion( std::string contentType )
+std::string gnExtencion( std::string contentType ,  std::string path )
 {
     std::map<std::string, std::string>::iterator i;
     std::string ex;
@@ -38,7 +38,7 @@ std::string gnExtencion( std::string contentType )
             break;
         }
     }
-    std::string s =  itos() + ex;
+    std::string s =  path + itos() + ex;
     return s;
 }
 
@@ -49,7 +49,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     if ( !Clients.flag )
     {
         Clients.flag = true;
-        std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);
+        std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath);
         Clients.postFile.open(fname.c_str(), std::ios::app );
         find = Clients.request.find("\r\n");
         str  = Clients.request.substr(0 , find);
@@ -90,6 +90,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
 
 void    Post( Client & Clients , char *buff , int rd )
 {
+
     std::map<std::string, std::string>::iterator it;
 
     if ( Clients.reqRes.httpHeaders.find("Transfer-Encoding") != Clients.reqRes.httpHeaders.end() )
@@ -105,7 +106,7 @@ void    Post( Client & Clients , char *buff , int rd )
     }
     else if ( !Clients.flag )
     {
-        std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"]);;
+        std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath );
         Clients.postFile.open(fname.c_str(), std::ios::app );
         Clients.postFile.write(Clients.request.c_str(), Clients.request.size());
         Clients.flag = true;

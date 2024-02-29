@@ -102,7 +102,12 @@ void    multiplexing( std::vector<Server> & sv )
                     }
                 }
                 if ( Clients[fd].reqRes.Component.method == "POST" && !Clients[fd].enf)
-                    Post( Clients[fd] , buff , rd );
+                {
+                    if ( Clients[fd].reqRes.returnCode != 200 && Clients[fd].reqRes.returnCode != 301 )
+                        Clients[fd].enf = true;
+                    else
+                        Post( Clients[fd] , buff , rd );
+                }
                 else if ( Clients[fd].reqRes.Component.method != "POST" )
                     Clients[fd].enf = true;
             }

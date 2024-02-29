@@ -14,6 +14,9 @@ class Response : public Request
         void listDirFiles(std::string path);
         void formChunkedResponse(Location& req, Server& srv);
         void getMethod(Location& req, Server& srv);
+        void openErrorPage(Server& srv);
+        void deleteMethod(Location& req, Server& srv);
+        void deleteDirectory(std::string path, Location& req, Server& srv);
 };
 
 std::string determineFileExtension(std::string fileName);
