@@ -182,6 +182,7 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
     try
     {
         match = matchURIWithLocation(srv);
+        matchedLocation = match;
         if (!match.ret.empty())
         {
             std::cout << "MATCH RET" << std::endl;

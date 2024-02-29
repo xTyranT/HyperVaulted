@@ -24,6 +24,7 @@ class  Request
         int sFd;
         std::string file;
         std::string responseBuffer;
+        Location matchedLocation;
 
         Request(void);
         Request(const Request& other);

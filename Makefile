@@ -39,6 +39,7 @@ clean :
 	rm -rf ./upload/*
 
 fclean : clean
+	rm -rf ErrorPages/[0123456789]*.html
 	rm -rf $(NAME)
 	rm -rf $(OBJSDIR)
 
