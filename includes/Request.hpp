@@ -22,6 +22,7 @@ class  Request
         std::map<std::string, std::string>  httpHeaders;
         int returnCode;
         int sFd;
+        int sindx;
         std::string file;
         std::string responseBuffer;
         Location matchedLocation;

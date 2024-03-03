@@ -28,6 +28,7 @@ std::string itos()
 
 std::string gnExtencion( std::string contentType ,  std::string path )
 {
+    std::cout << path << std::endl;
     std::map<std::string, std::string>::iterator i;
     std::string ex;
     for ( i = mimeTypes.begin() ; i != mimeTypes.end(); i++ )
@@ -42,7 +43,7 @@ std::string gnExtencion( std::string contentType ,  std::string path )
     return s;
 }
 
-void    ChunkedPost( Client & Clients , char *buff , int rd )
+void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
 {
     size_t find = 0;
     std::string str;
@@ -63,6 +64,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
             str  = Clients.request.substr(0 , find);
             Clients.chunksize = htd( str );
             Clients.request = Clients.request.erase(0, find + 2);
+            
         }
     }
     else
@@ -80,31 +82,23 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     }
     if ( Clients.chunksize == 0 )
     {
+        std::cout << "here 1" << std::endl;
         Clients.reqRes.returnCode = 201;
-        // Clients.reqRes.formTheResponse
-        std::cout << "here" << std::endl;
+        Clients.reqRes.formTheResponse(srv);
         Clients.enf = true;
         Clients.postFile.close();
     }
 }
 
-void    Post( Client & Clients , char *buff , int rd )
+void    Post( Client & Clients , char *buff , int rd , Server & srv)
 {
 
     std::map<std::string, std::string>::iterator it;
 
     if ( Clients.reqRes.httpHeaders.find("Transfer-Encoding") != Clients.reqRes.httpHeaders.end() )
-    {
-        it = Clients.reqRes.httpHeaders.find("Transfer-Encoding");
-        if ( it->second == "chunked" )
-        {
-            ChunkedPost( Clients , buff , rd );
-        }
-        else 
-            std::cout << "error " << std::endl;
-            
-    }
-    else if ( !Clients.flag )
+            ChunkedPost( Clients , buff , rd , srv);
+    else {
+    if ( !Clients.flag )
     {
         std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath );
         Clients.postFile.open(fname.c_str(), std::ios::app );
@@ -116,11 +110,13 @@ void    Post( Client & Clients , char *buff , int rd )
     {
         Clients.postFile.write(buff, rd);
     }
-    if ( Clients.sread == Clients.contentlength )
+    if ( Clients.sread >= Clients.contentlength )
     {
+        std::cout << "here " << std::endl;
         Clients.reqRes.returnCode = 201;
-        std::cout << "here1" << std::endl;
+        Clients.reqRes.formTheResponse(srv);
         Clients.enf = true;
         Clients.postFile.close();
+    }
     }
 }

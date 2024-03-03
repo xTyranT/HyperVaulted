@@ -144,7 +144,7 @@ void Response::getMethod(Location& req, Server& srv)
         closedir(directory);
         returnCode = 404;
         openErrorPage(srv);
-        // formTheResponse(srv);
+        formTheResponse(srv);
     }
     else
     {
@@ -171,7 +171,7 @@ void Response::getMethod(Location& req, Server& srv)
                 std::cout << "NO INDEX" << std::endl;
                 returnCode = 403;
                 openErrorPage(srv);
-                // formTheResponse(srv);
+                formTheResponse(srv);
                 return;
             }
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == false)
@@ -199,7 +199,7 @@ void Response::getMethod(Location& req, Server& srv)
             {
                 returnCode = 404;
                 openErrorPage(srv);
-                // formTheResponse(srv);
+                formTheResponse(srv);
                 return;
             }
             else
@@ -209,7 +209,7 @@ void Response::getMethod(Location& req, Server& srv)
                 {
                     returnCode = 404;
                     openErrorPage(srv);
-                    // formTheResponse(srv);
+                    formTheResponse(srv);
                     return;
                 }
                 else
@@ -286,50 +286,6 @@ bool emptyDirectory(std::string path)
     }
     closedir(directory);
     return true;
-}
-
-void esponse::openErrorPage(Server& srv)
-{
-    std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
-    std::cout << "OPEN ERROR PAGE" << std::endl;
-    if (i != srv.errPages.end())
-    {
-        std::cout << "PATH: " << i->second << std::endl;
-        std::ifstream openFile(i->second.c_str());
-        if (openFile.is_open())
-        {
-            std::cout << "OPEN FILE" << std::endl;
-            struct stat fileStat;
-            stat(i->second.c_str(), &fileStat);
-            Response& res = static_cast<Response&>(*this);
-            res.responseBuffer.append(Component.httpVersion + " ");
-            res.responseBuffer.append(to_string(returnCode) + " ");
-            res.responseBuffer.append(errorPageMessage() + "\r\n");
-            res.responseBuffer.append("Content-Length: ");
-            res.responseBuffer.append(to_string(fileStat.st_size));
-            res.responseBuffer.append("\r\n");
-            res.responseBuffer.append("Content-Type: ");
-            res.responseBuffer.append(determineFileExtension(i->second));
-            res.responseBuffer.append("\r\n\r\n");
-            res.file = i->second;
-            return;
-        }
-        else
-        {
-            generateCorrespondingErrorPage();
-            file = "./ErrorPages/" + to_string(returnCode) + ".html";
-            srv.errPages.erase(returnCode);
-            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
-            return;
-        }
-    }
-    else
-    {
-        generateCorrespondingErrorPage();
-        file = "./ErrorPages/" + to_string(returnCode) + ".html";
-        srv.errPages.erase(returnCode);
-        return;
-    }
 }
 
 void Response::deleteDirectory(std::string path, Location& req, Server& srv)
@@ -419,23 +375,24 @@ void Response::formTheResponse(Server& srv)
     responseBuffer.append(errorPageMessage());
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Length: ");
-    std::string filePath;
     std::cout << srv.errPages.size() << std::endl;
     std::map<int, std::string>::iterator i = srv.errPages.find(returnCode);
     if (i != srv.errPages.end())
-        filePath = i->second;
+        file = i->second;
     else
-        filePath = generateCorrespondingErrorPage().second;
-    std::ifstream file(filePath.c_str());
-    if (!file.is_open())
-        std::cout << strerror(errno) << std::endl;
+        file = generateCorrespondingErrorPage().second;
     struct stat fileStat;
-    stat(filePath.c_str(), &fileStat);
+    stat(file.c_str(), &fileStat);
     responseBuffer.append(to_string(fileStat.st_size));
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Type: ");
-    responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
+    if (returnCode != 200)
+        responseBuffer.append("text/html");
+    else
+        responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
+    // std::cout <<Component.path  << "heheheh " << std::endl;
     responseBuffer.append("\r\n\r\n");
+    
 }
 
 Response::~Response()

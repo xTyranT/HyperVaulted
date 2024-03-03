@@ -98,7 +98,7 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].reqRes.requestParser(Clients[fd].requestHeader, sv);
                         Clients[fd].request = Clients[fd].request.erase(0, find + 4);
                         Clients[fd].sread -= find + 4;
-                        // std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
+                        Clients[fd].reqRes.printRequestComponents();
                     }
                 }
                 if ( Clients[fd].reqRes.Component.method == "POST" && !Clients[fd].enf)
@@ -106,32 +106,35 @@ void    multiplexing( std::vector<Server> & sv )
                     if ( Clients[fd].reqRes.returnCode != 200 && Clients[fd].reqRes.returnCode != 301 )
                         Clients[fd].enf = true;
                     else
-                        Post( Clients[fd] , buff , rd );
+                        Post( Clients[fd] , buff , rd , sv[Clients[fd].reqRes.sindx]);
                 }
                 else if ( Clients[fd].reqRes.Component.method != "POST" )
                     Clients[fd].enf = true;
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
             {
-                // std::cout << "here " << std::endl;
                if( !Clients[fd].resred )
                {
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
                     write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
-                    std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
                }
                else{
                     memset(buff, 0 , 1024);
                     Clients[fd].resFile.read(buff , 1023);
                     write(fd, buff, Clients[fd].resFile.gcount());
                     std::cout << buff << std::endl;
-                    // int r =  recv( Clients[fd].resFile , buff , 1023 , 0):
                }
                if ( Clients[fd].resFile.eof())
                {
-                    close(Clients[fd].fd);
+                    std::cout << "enff      ***" << std::endl;
+                    if (epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]))
+                    {
+                        std::cout << "ctl del " << std::endl;
+                    }
+                    close(fd);
                     Clients.erase(fd);
+                    
                }
             }
             

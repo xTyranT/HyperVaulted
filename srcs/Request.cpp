@@ -64,8 +64,13 @@ int Request::valueChecker(std::vector<Server>& srv)
     if (i != httpHeaders.end() && i->second != "chunked")
         return 501;
     if (i == httpHeaders.end() && httpHeaders.find("Content-Length") == httpHeaders.end() && Component.method == "POST")
-        return 400;
+        return 411;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
+        return 501;
+    if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
+        return 400;
+    i =  httpHeaders.find("Content-Type");
+    if ( i != httpHeaders.end() && i->second.find("multipart/form-data") != std::string::npos)
         return 501;
     if (pathURIChecker(Component.path))
         return 400;
@@ -107,15 +112,17 @@ std::string Request::errorPageMessage(void)
         return std::string("OK");
     if (returnCode == 201)
         return std::string("Created");
+    if (returnCode == 411)
+        return std::string("Length Required");
     return std::string();
 }
 
 std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 {
-    if (returnCode != 200 && returnCode != 301)
+    if (returnCode != 200 && returnCode != 301 )
     {
-        std::string fileName = "/home/hamdani/webserv/ErrorPages/" + to_string(returnCode) + ".html";
-        std::ifstream content("/home/hamdani/webserv/ErrorPages/error_page.html");
+        std::string fileName = "./ErrorPages/" + to_string(returnCode) + ".html";
+        std::ifstream content("./ErrorPages//error_page.html");
         if (!content.is_open())
             std::cout << strerror(errno) << std::endl;
         std::stringstream file;
@@ -182,7 +189,7 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
     try
     {
         match = matchURIWithLocation(srv);
-        matchedLocation = match
+        matchedLocation = match;
         if (!match.ret.empty())
         {
             std::cout << "MATCH RET" << std::endl;
@@ -196,7 +203,7 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
             std::cout << "MATCH METHOD" << std::endl;
             std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
             if (i == match.methods.end())
-            {
+            { 
                 returnCode = 405;
                 Response& res = static_cast<Response&>(*this);
                 res.openErrorPage(srv[whichServer]);
@@ -222,6 +229,7 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
             returnCode = 404;
         Response& res = static_cast<Response&>(*this);
         res.openErrorPage(srv[whichServer]);
+        res.formTheResponse(srv[whichServer]);
     }
 }
 
@@ -235,6 +243,7 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
             break;
         whichServer++;
     }
+    sindx = whichServer;
     std::stringstream stream;
     std::string line;
     stream << request;
