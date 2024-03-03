@@ -135,7 +135,6 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
 Location& Request::matchURIWithLocation(std::vector<Server>& srv)
 {
     std::vector<Server>::iterator i;
-    std::cout << "component path: " << Component.path << std::endl;
     for (i = srv.begin(); i != srv.end(); i++)
     {
         if (sFd == i->fd)
@@ -156,7 +155,8 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
                         }
                     }
                     Component.path = Component.path.substr(0, Component.path.rfind('/'));
-                    matchURIWithLocation(srv);
+                    if (!Component.path.empty())
+                        matchURIWithLocation(srv);
                 }
                 else if (!dir)
                 {
@@ -278,41 +278,6 @@ void Request::printRequestComponents(void)
     std::cout << "---key | value---\n";
     for(std::map<std::string, std::string>::iterator i = httpHeaders.begin(); i != httpHeaders.end(); i++)
         std::cout << i->first << " | " << i->second << std::endl;
-}
-
-std::string Request::getRequest(void)
-{
-    std::ostringstream stream;
-    int s = socket(AF_INET,SOCK_STREAM,0);
-    if(s < 0)
-        std::cout << "s " << strerror(errno) << std::endl, exit(1);
-    struct sockaddr_in fam;
-    int len = sizeof(fam);
-
-    fam.sin_addr.s_addr = INADDR_ANY;
-    fam.sin_port = htons(8080);
-    fam.sin_family = AF_INET;
-    setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&fam,sizeof(len));
-    int x = bind(s, (struct sockaddr *)&fam, sizeof(fam));
-    if (x < 0)
-        std::cout << "x " << strerror(errno) << std::endl, exit(1);
-    int d = listen(s, 10);
-    if (d < 0)
-        std::cout << "d " << strerror(errno) << std::endl, exit(1);
-    while (true)
-    {
-        int ns = accept(s, (struct sockaddr *)&fam, (socklen_t*)&len);
-        if (ns < 0)
-            std::cout << "ns " << strerror(errno) << std::endl, exit(1);
-
-        char buffer[1000000];
-        int r = read(ns, buffer, 1000000);
-        buffer[r] = 0;
-        close(ns);
-        return buffer;
-    }
-    std::string i = "failed to get the request\n";
-    return i;
 }
 
 Request::~Request(void)

@@ -16,10 +16,31 @@ std::vector<Server> getAvailableServers(std::ifstream& file)
     return srvs;
 }
 
+std::vector<Server> getDefaultServer(void)
+{
+    std::vector<Server> sv;
+    Server tmp;
+
+    tmp.port = 8080;
+    tmp.host = "localhost";
+    tmp.root = "./";
+    tmp.indexes.push_back("index.html");
+    tmp.srvNames.push_back("localhost");
+    tmp.maxBodySize = 1024;
+    Location loc;
+    loc.path = "/";
+    loc.methods.push_back("GET");
+    loc.root = "./";
+    loc.indexes.push_back("index.html");
+    tmp.location.push_back(loc);
+    sv.push_back(tmp);
+    return sv;
+}
+
+
 Location::Location(void)
 {
     path = std::string();
-    alias = std::string();
     methods = std::vector<std::string>();
     root = std::string();
     indexes = std::vector<std::string>();
@@ -27,7 +48,7 @@ Location::Location(void)
     upload = false;
     cgi = false;
     uploadPath = std::string();
-    cgiPaths = std::vector<std::string>();
+    cgiPaths = std::vector<std::pair<std::string, std::string> >();
     ret = std::map<int, std::string>();
 }
 
@@ -39,7 +60,6 @@ Location::Location(const Location& other)
 const Location& Location::operator=(const Location& other)
 {
     path = other.path;
-    alias = other.alias;
     methods = other.methods;
     root = other.root;
     indexes = other.indexes;
@@ -83,12 +103,6 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
         if (attr.size() != 2)
             throw std::invalid_argument("root must be one path");
         root = *(i + 1);
-    }
-    else if (*i == ALIAS)
-    {
-        if (attr.size() != 2)
-            throw std::invalid_argument("alias must be one path");
-        alias = *(i + 1);
     }
     else if (*i == INDEX)
     {
@@ -139,11 +153,10 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
     }
     else if (*i == CGIPATH)
     {
-        if (attr.size() < 2)
+        if (attr.size() != 3)
             throw std::invalid_argument("cgi_path must file extension + one valid path");
         i++;
-        for (i = i; i != attr.end(); i++)
-            cgiPaths.push_back(*i);
+        cgiPaths.push_back(std::pair<std::string, std::string>(*i, *(i + 1)));
     }
     else if (*i == RETURN_)
     {
@@ -265,8 +278,7 @@ void Server::printServerAttributes(void)
         std::cout << "upload_path: " << i->uploadPath << std::endl;
         std::cout << "cgi_paths: ";
         for (size_t j = 0; j < i->cgiPaths.size(); j++)
-            std::cout << i->cgiPaths[j] << " ";
-        std::cout << std::endl;
+            std::cout << i->cgiPaths[j].first << " | " << i->cgiPaths[j].second << "\n";
         std::cout << "redirecting link: ";
         for (std::map<int, std::string>::iterator j = i->ret.begin(); j != i->ret.end(); j++)
             std::cout << j->first << " | " << j->second << std::endl;
@@ -340,8 +352,6 @@ void Server::checkAndStoreServerAttributes(std::vector<std::string> attr, std::i
             throw std::invalid_argument("location must have one path");
         Location tmp;
         tmp.path = *(i + 1);
-        if (tmp.path.at(0) != '/' || tmp.path.at(tmp.path.size() - 1) == '/')
-            throw std::invalid_argument("location path must start with / and not end with /");
         std::string line;
         std::getline(file, line);
         line.erase(remove(line.begin(), line.end(), ' '), line.end());

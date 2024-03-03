@@ -10,5 +10,5 @@ class Cgi
         const Cgi& operator=(const Cgi& ref);
         ~Cgi();
 
-        void cgiCaller(Server& srv, Location& req);
+        void cgiCaller(Server& srv, Location& req, Response& res);
 };

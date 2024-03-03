@@ -69,7 +69,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd )
     }
     if ( Clients.chunksize == 0 )
     {
-        std::cout << "here" << std::endl;
         Clients.enf = true;
         Clients.postFile.close();
     }
@@ -104,7 +103,6 @@ void    Post( Client & Clients , char *buff , int rd )
     }
     if ( Clients.sread == Clients.contentlength )
     {
-        std::cout << "here1" << std::endl;
         Clients.enf = true;
         Clients.postFile.close();
     }

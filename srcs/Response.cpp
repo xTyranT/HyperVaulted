@@ -1,4 +1,5 @@
 #include "../includes/Response.hpp"
+#include "../includes/Cgi.hpp"
 
 std::map<std::string, std::string> mimeTypes;
 
@@ -99,7 +100,7 @@ void Response::listDirFiles(std::string path)
             tmp.append(">" + *i + "/" + "</a></small><br>");
         }
         else
-            tmp.append("\">" + *i + "</a></small><br>"); // <a href="nightly/">nightly/</a>
+            tmp.append("\">" + *i + "</a></small><br>");
     }
     tmp.append("  </h1>\n</body>\n</html>");
     responseBuffer.append(ret.str() + " " + errorPageMessage() + "\r\n" + "Content-Length: ");
@@ -184,8 +185,8 @@ void Response::getMethod(Location& req, Server& srv)
             else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == true)
             {
                 std::cout << "CGI" << std::endl;
-                // run cgi on requested file with GET method
-                // return code depend on cgi
+                Cgi cgi;
+                cgi.cgiCaller(srv, req, *this);
                 return;
             }
         }
