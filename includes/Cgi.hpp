@@ -10,5 +10,7 @@ class Cgi
         const Cgi& operator=(const Cgi& ref);
         ~Cgi();
 
-        void cgiCaller(Server& srv, Location& req);
+        void cgiCaller(Server& srv, Location& req, Response& res);
+        char** getEnv(Server& srv, Response& res);
+        char** getArgv(Server& srv, Response& res, Location& req);
 };

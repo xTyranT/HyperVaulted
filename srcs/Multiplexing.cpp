@@ -11,8 +11,6 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     int len = sizeof( struct sockaddr_in);
 
     int cfd = accept( fd , reinterpret_cast< struct sockaddr * >(&newcon) , reinterpret_cast<socklen_t*>(&len));
-    // std::cout << "new connection" << std::endl;
-    // std::cout << "cfd " << cfd << std::endl;
     if ( cfd == -1 )
         std::cout << strerror(errno) << std::endl;
     cl.fd = cfd;
@@ -98,7 +96,6 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].reqRes.requestParser(Clients[fd].requestHeader, sv);
                         Clients[fd].request = Clients[fd].request.erase(0, find + 4);
                         Clients[fd].sread -= find + 4;
-                        Clients[fd].reqRes.printRequestComponents();
                     }
                 }
                 if ( Clients[fd].reqRes.Component.method == "POST" && !Clients[fd].enf)
@@ -115,6 +112,7 @@ void    multiplexing( std::vector<Server> & sv )
             {
                if( !Clients[fd].resred )
                {
+                    std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
                     write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
@@ -127,14 +125,12 @@ void    multiplexing( std::vector<Server> & sv )
                }
                if ( Clients[fd].resFile.eof())
                {
-                    std::cout << "enff      ***" << std::endl;
                     if (epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]))
                     {
                         std::cout << "ctl del " << std::endl;
                     }
                     close(fd);
                     Clients.erase(fd);
-                    
                }
             }
             

@@ -90,6 +90,8 @@ int Request::valueChecker(std::vector<Server>& srv)
 
 std::string Request::errorPageMessage(void)
 {
+    if (returnCode == 204)
+        return std::string("No Content");
     if (returnCode == 301)
         return std::string("Moved Permanently");
     if (returnCode == 400)
@@ -141,40 +143,51 @@ std::pair<int, std::string> Request::generateCorrespondingErrorPage(void)
     return std::pair<int, std::string>();
 }
 
-Location& Request::matchURIWithLocation(std::vector<Server>& srv)
+Location& Request::matchURIWithLocation(std::vector<Server>& srv, std::string path)
 {
     std::vector<Server>::iterator i;
-    std::cout << "component path: " << Component.path << std::endl;
     for (i = srv.begin(); i != srv.end(); i++)
     {
         if (sFd == i->fd)
         {
             if (!i->location.empty())
             {
-                std::string fullPath = i->root + Component.path;
+                std::string fullPath = i->root + path;
                 DIR *dir = opendir(fullPath.c_str());
                 if (dir)
                 {
                     std::vector<Location>::iterator j;
                     for (j = i->location.begin(); j != i->location.end(); j++)
                     {
-                        if (Component.path == j->path)
+                        if (path == j->path)
                         {
                             closedir(dir);
                             return *j;
                         }
                     }
+                    if (path.at(path.size() - 1) == '/')
+                        path = path.substr(0, path.rfind('/'));
+                    else
+                        path = path.substr(0, path.rfind('/') + 1);
+                    if (!path.empty())
+                        return matchURIWithLocation(srv, path);
                 }
                 else if (!dir)
                 {
                     closedir(dir);
-                    std::string absPath = Component.path.substr(0, Component.path.rfind('/'));
+                    std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
                     std::vector<Location>::iterator j;
                     for (j = i->location.begin(); j != i->location.end(); j++)
                     {
                         if (absPath == j->path)
                             return *j;
                     }
+                    if (path.at(path.size() - 1) == '/')
+                        path = path.substr(0, path.rfind('/'));
+                    else
+                        path = path.substr(0, path.rfind('/') + 1);
+                    if (!path.empty())
+                        return matchURIWithLocation(srv, path);
                 }
             }
         }
@@ -184,39 +197,43 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv)
 
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
-    std::cout << "MATCH LOCATION" << std::endl;
     Location match;
     try
     {
-        match = matchURIWithLocation(srv);
+        match = matchURIWithLocation(srv, Component.path);
         matchedLocation = match;
         if (!match.ret.empty())
         {
-            std::cout << "MATCH RET" << std::endl;
             Response& res = static_cast<Response&>(*this);
             returnCode = 301;
-            res.matchLocation(srv, whichServer);
+            res.openErrorPage(srv[whichServer]);
+            res.formTheResponse(srv[whichServer], match);
             return;
         }
         else
         {
-            std::cout << "MATCH METHOD" << std::endl;
             std::vector<std::string>::iterator i = std::find(match.methods.begin(), match.methods.end(), Component.method);
             if (i == match.methods.end())
             { 
                 returnCode = 405;
                 Response& res = static_cast<Response&>(*this);
                 res.openErrorPage(srv[whichServer]);
-                res.formTheResponse(srv[whichServer]);
+                res.formTheResponse(srv[whichServer], match);
             }
             else
             {
-                std::cout << "METHOD ALLOWED\n";
                 Response& res = static_cast<Response&>(*this);
                 if (Component.method == "GET")
                     res.getMethod(match, srv[whichServer]);
                 else if (Component.method == "DELETE")
                     res.deleteMethod(match, srv[whichServer]);
+                else if (Component.method == "POST" && match.upload == false)
+                {
+                    returnCode = 409;
+                    res.openErrorPage(srv[whichServer]);
+                    res.formTheResponse(srv[whichServer], match);
+                    return;
+                }
                 return;
             }
         }
@@ -229,13 +246,13 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
             returnCode = 404;
         Response& res = static_cast<Response&>(*this);
         res.openErrorPage(srv[whichServer]);
-        res.formTheResponse(srv[whichServer]);
+        res.formTheResponse(srv[whichServer], match);
     }
 }
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
-    std::cout << "REQUEST PARSER" << std::endl;
+    std::cout << "request: " << request << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
     {
@@ -268,13 +285,12 @@ void Request::requestParser(std::string &request, std::vector<Server>& srv)
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
     }
     returnCode = valueChecker(srv);
-    std::cout << returnCode << std::endl;
     if (returnCode != 200)
     {
         Response& res = static_cast<Response&>(*this);
         res.openErrorPage(srv[whichServer]);
-        res.formTheResponse(srv[whichServer]);
-        std::cout << "here " << std::endl;
+        Location loc;
+        res.formTheResponse(srv[whichServer], loc);
         return;
     }
     else if (returnCode == 200)
@@ -289,41 +305,6 @@ void Request::printRequestComponents(void)
     std::cout << "---key | value---\n";
     for(std::map<std::string, std::string>::iterator i = httpHeaders.begin(); i != httpHeaders.end(); i++)
         std::cout << i->first << " | " << i->second << std::endl;
-}
-
-std::string Request::getRequest(void)
-{
-    std::ostringstream stream;
-    int s = socket(AF_INET,SOCK_STREAM,0);
-    if(s < 0)
-        std::cout << "s " << strerror(errno) << std::endl, exit(1);
-    struct sockaddr_in fam;
-    int len = sizeof(fam);
-
-    fam.sin_addr.s_addr = INADDR_ANY;
-    fam.sin_port = htons(8080);
-    fam.sin_family = AF_INET;
-    setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&fam,sizeof(len));
-    int x = bind(s, (struct sockaddr *)&fam, sizeof(fam));
-    if (x < 0)
-        std::cout << "x " << strerror(errno) << std::endl, exit(1);
-    int d = listen(s, 10);
-    if (d < 0)
-        std::cout << "d " << strerror(errno) << std::endl, exit(1);
-    while (true)
-    {
-        int ns = accept(s, (struct sockaddr *)&fam, (socklen_t*)&len);
-        if (ns < 0)
-            std::cout << "ns " << strerror(errno) << std::endl, exit(1);
-
-        char buffer[1000000];
-        int r = read(ns, buffer, 1000000);
-        buffer[r] = 0;
-        close(ns);
-        return buffer;
-    }
-    std::string i = "failed to get the request\n";
-    return i;
 }
 
 Request::~Request(void)

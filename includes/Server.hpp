@@ -6,7 +6,6 @@ class Location
 {
     public:
         std::string path;
-        std::string alias;
         std::vector<std::string> methods;
         std::string root;
         std::vector<std::string> indexes;
@@ -14,8 +13,8 @@ class Location
         bool upload;
         bool cgi;
         std::string uploadPath;
-        std::vector<std::string> cgiPaths;
-        std::map<int, std::string> ret;
+        std::vector<std::pair<std::string, std::string> > cgiPaths;
+        std::string ret;
 
         Location(void);
         Location(const Location& other);
@@ -53,6 +52,7 @@ class Server
 };
 
 std::vector<Server> getAvailableServers(std::ifstream& file);
+std::vector<Server> getDefaultServer(void);
 void    multiplexing( std::vector<Server> & sv );
 void    Post( class Client & Clients , char *buff , int rd , Server & srv);
 void fillMimeTypes(void);

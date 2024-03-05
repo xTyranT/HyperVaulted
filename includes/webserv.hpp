@@ -14,8 +14,9 @@
 #define METHODS "methods"
 #define AUTOINDEX "autoindex"
 #define UPLOAD "upload"
-#define ALIAS "alias"
 #define CGI "cgi"
 #define UPLOADPATH "upload_path"
 #define CGIPATH "cgi_path"
 #define RETURN_ "return"
+
+std::string getFileTemplate(void);

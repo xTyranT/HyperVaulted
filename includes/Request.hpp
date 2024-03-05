@@ -32,7 +32,6 @@ class  Request
         const Request& operator=(const Request& other);
         ~Request(void);
 
-        std::string getRequest(void);
         void requestParser(std::string& request, std::vector<Server>& srv);
         int valueChecker(std::vector<Server>& srv);
         std::pair<int, std::string> generateCorrespondingErrorPage(void);
@@ -40,5 +39,5 @@ class  Request
         bool pathURIChecker(std::string& URI);
         void matchLocation(std::vector<Server>& srv, int whichServer);
         void printRequestComponents(void);
-        Location& matchURIWithLocation(std::vector<Server>& srv);
+        Location& matchURIWithLocation(std::vector<Server>& srv, std::string path);
 };

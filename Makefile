@@ -10,7 +10,7 @@ OBJSDIR = ./objs
 
 NAME = HyperVaulted
 
-SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp Post.cpp Cgi.cpp
+SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp Post.cpp Cgi.cpp FileTemplate.cpp
 
 UTIL_FILES = stringManipulators.cpp
 
