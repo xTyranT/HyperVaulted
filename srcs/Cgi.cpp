@@ -2,7 +2,7 @@
 
 Cgi::Cgi()
 {
-
+    
 }
 
 Cgi::Cgi(const Cgi &other)
@@ -78,15 +78,13 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
 
 void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
 {
-    std::cout << "formCgiResponse" << std::endl;
     struct stat fileStat;
     stat((srv.root + "/cgi.cgi").c_str(), &fileStat);
     res.responseBuffer.append(res.Component.httpVersion + " ");
     res.responseBuffer.append(to_string(res.returnCode) + " ");
     res.responseBuffer.append(res.errorPageMessage() + "\r\n");
     std::fstream file;
-    file.open(res.file.c_str());
-    std::cout << "file : " << res.file << std::endl;    
+    file.open(res.file.c_str());   
     if (!file.is_open())
     {
         res.returnCode = 500;
@@ -100,7 +98,6 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
 
 void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
 {
-    std::cout << "cgiCaller" << std::endl;
     pid_t pid;
     int status;
     char **env = getEnv(srv, res);
@@ -121,7 +118,6 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
     }
     else if (pid == 0)
     {
-        std::cout << "child process" << std::endl;
         FILE* fd = freopen((srv.root + "/cgi.cgi").c_str(), "w+", stdout);
         if (!fd)
             exit(EXIT_FAILURE);
