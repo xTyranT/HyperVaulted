@@ -7,11 +7,14 @@
 class   Client
 {   
     public:
-    int sfd;
+        int sfd;
         int fd;
-        int chunksize;
-        int contentlength;
-        int sread;
+        long long chunksize;
+        long long contentlength;
+        long long sread;
+        struct timeval stime;
+        struct timeval etime;
+        std::string postpath;
         std::string chunkedbuff;
         std::string request;
         std::string requestHeader;

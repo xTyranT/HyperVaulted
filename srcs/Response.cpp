@@ -37,6 +37,7 @@ const Response& Response::operator=(const Response& other)
 {
     Request::operator=(other);
     responseBuffer = other.responseBuffer;
+    postCgiFile = other.postCgiFile;
     return *this;
 }
 
@@ -173,6 +174,13 @@ void Response::getMethod(Location& req, Server& srv)
             {
                 Cgi cgi;
                 cgi.cgiCaller(srv, req, *this);
+                if (returnCode != 200)
+                {
+                    openErrorPage(srv);
+                    formTheResponse(srv, req);
+                    return;
+                }
+                cgi.formCgiResponse(srv, req, *this);
                 return;
             }
         }
@@ -207,8 +215,16 @@ void Response::getMethod(Location& req, Server& srv)
         }
         else if (req.cgi == true)
         {
+            std::cout << "CGI" << std::endl;
             Cgi cgi;
             cgi.cgiCaller(srv, req, *this);
+            if (returnCode != 200)
+            {
+                openErrorPage(srv);
+                formTheResponse(srv, req);
+                return;
+            }
+            cgi.formCgiResponse(srv, req, *this);
             return;
         }
     }
@@ -381,7 +397,6 @@ void Response::formTheResponse(Server& srv, Location& req)
     else
         responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
     responseBuffer.append("\r\n\r\n");
-    
 }
 
 Response::~Response()

@@ -45,6 +45,7 @@ const Request& Request::operator=(const Request& other)
     httpHeaders = other.httpHeaders;
     returnCode = other.returnCode;
     sFd = other.sFd;
+    sindx = other.sindx;
     return *this;
 }
 
@@ -116,6 +117,8 @@ std::string Request::errorPageMessage(void)
         return std::string("Created");
     if (returnCode == 411)
         return std::string("Length Required");
+    if (returnCode == 408 )
+        return std::string("Request Timeout");
     return std::string();
 }
 

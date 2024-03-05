@@ -1,6 +1,7 @@
 
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
+#include "../includes/Cgi.hpp"
 #include <cmath>
 
 int x = 1;
@@ -52,6 +53,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     {
         Clients.flag = true;
         std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath);
+        Clients.reqRes.postCgiFile = fname;
         Clients.postFile.open(fname.c_str(), std::ios::app );
 
         if (Clients.postFile.fail())
@@ -91,39 +93,71 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     }
     if ( Clients.chunksize == 0 )
     {
-        Clients.reqRes.returnCode = 201;
-        Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
         Clients.enf = true;
+        if ( Clients.reqRes.matchedLocation.cgi )
+        {
+            Cgi postCgi;
+            postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+            postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+        }
+        else
+        {
+            Clients.reqRes.returnCode = 201;
+            Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
+        }
         Clients.postFile.close();
     }
 }
 
 void    Post( Client & Clients , char *buff , int rd , Server & srv)
 {
-
     std::map<std::string, std::string>::iterator it;
+
 
     if ( Clients.reqRes.httpHeaders.find("Transfer-Encoding") != Clients.reqRes.httpHeaders.end() )
             ChunkedPost( Clients , buff , rd , srv);
     else {
-    if ( !Clients.flag )
-    {
-        std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath );
-        Clients.postFile.open(fname.c_str(), std::ios::app );
-        Clients.postFile.write(Clients.request.c_str(), Clients.request.size());
-        Clients.flag = true;
-        Clients.contentlength = atoi(Clients.reqRes.httpHeaders["Content-Length"].c_str());
-    }
-    else
-    {
-        Clients.postFile.write(buff, rd);
-    }
-    if ( Clients.sread >= Clients.contentlength )
-    {
-        Clients.reqRes.returnCode = 201;
-        Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
-        Clients.enf = true;
-        Clients.postFile.close();
-    }
+        if ( !Clients.flag )
+        {
+            Clients.flag = true;
+            std::string fname =  gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath );
+            Clients.reqRes.postCgiFile = fname;
+            Clients.postFile.open(fname.c_str(), std::ios::app );
+            Clients.contentlength = atoi(Clients.reqRes.httpHeaders["Content-Length"].c_str());
+            if ( Clients.sread >= Clients.contentlength)
+            {
+                Clients.postFile.write(Clients.request.c_str(), Clients.contentlength);
+                Clients.sread = Clients.contentlength;
+            }
+            else
+                Clients.postFile.write(Clients.request.c_str(), Clients.request.size());
+        }
+        else
+        {
+            if ( Clients.sread >= Clients.contentlength)
+            {
+                int x = Clients.sread - Clients.contentlength;
+                Clients.postFile.write(buff, rd - x);
+                Clients.sread = Clients.contentlength;
+            }
+            else
+                Clients.postFile.write(buff, rd);
+        }
+        if ( Clients.sread == Clients.contentlength )
+        {
+            Clients.enf = true;
+            if ( Clients.reqRes.matchedLocation.cgi )
+            {
+                Cgi postCgi;
+                postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+                postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+            }
+            else
+            {
+                Clients.reqRes.returnCode = 201;
+                Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
+            }
+            Clients.postFile.close();
+        }
     }
 }
