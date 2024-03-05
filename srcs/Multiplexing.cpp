@@ -118,12 +118,12 @@ void    multiplexing( std::vector<Server> & sv )
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
                     write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
+                    
                }
                else{
                     memset(buff, 0 , 1024);
                     Clients[fd].resFile.read(buff , 1023);
                     write(fd, buff, Clients[fd].resFile.gcount());
-                    std::cout << buff << std::endl;
                }
                if ( Clients[fd].resFile.eof())
                {

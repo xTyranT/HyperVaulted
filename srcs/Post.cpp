@@ -19,7 +19,7 @@ int htd( std::string str )
 
 std::string itos()
 {
-    std::string name = "/upload";
+    std::string name = "upload";
     std::stringstream s;
     s << name << x  << '.' ;
     x++;
@@ -39,6 +39,7 @@ std::string gnExtencion( std::string contentType ,  std::string path )
             break;
         }
     }
+    std::cout << path << std::endl;
     std::string s =  path + itos() + ex;
     return s;
 }
