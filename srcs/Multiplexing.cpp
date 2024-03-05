@@ -110,27 +110,33 @@ void    multiplexing( std::vector<Server> & sv )
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
             {
-               if( !Clients[fd].resred )
-               {
-                    std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
+                if( !Clients[fd].resred )
+                {
+                    std::cout << "response buffer : " << Clients[fd].reqRes.responseBuffer << std::endl;
+                    std::cout << "response file : " << Clients[fd].reqRes.file << std::endl;
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                    if ( !Clients[fd].resFile.is_open() )
+                    {
+                        std::cout << "open " << strerror(errno) << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
                     write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
-               }
-               else{
+                }
+                else{
                     memset(buff, 0 , 1024);
                     Clients[fd].resFile.read(buff , 1023);
                     write(fd, buff, Clients[fd].resFile.gcount());
-               }
-               if ( Clients[fd].resFile.eof())
-               {
+                }
+                if ( Clients[fd].resFile.eof())
+                {
                     if (epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]))
                     {
                         std::cout << "ctl del " << std::endl;
                     }
                     close(fd);
                     Clients.erase(fd);
-               }
+                }
             }
             
         }
