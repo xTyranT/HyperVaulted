@@ -41,9 +41,14 @@
       color: #fff;
       text-decoration: none;
       font-weight: bold;
+      background: #3498db;
+      padding: 10px 20px;
+      border-radius: 5px;
+      transition: background 0.3s ease;
     }
 
     a:hover {
+      background: #2980b9;
       text-decoration: underline;
     }
 
@@ -134,6 +139,14 @@
   <div class="container">
     <h1 class="glitch" data-text="TEMPLATE-TEXT-HERE">TEMPLATE-TEXT-HERE</h1>
     <p class="rainbow">Lost in the cosmic void...</p>
+    <a href="/" onclick="backHome()">Back Home</a>
   </div>
+
+  <script>
+    function backHome() {
+      // Add your logic to navigate back to the home page or handle the button click
+      alert("Going back home!");
+    }
+  </script>
 </body>
 </html>

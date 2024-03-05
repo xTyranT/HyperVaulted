@@ -10,7 +10,7 @@ OBJSDIR = ./objs
 
 NAME = HyperVaulted
 
-SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp Post.cpp Cgi.cpp
+SRC_FILES = Server.cpp webserv.cpp Multiplexing.cpp Client.cpp Request.cpp Response.cpp Post.cpp Cgi.cpp FileTemplate.cpp
 
 UTIL_FILES = stringManipulators.cpp
 
@@ -36,7 +36,7 @@ $(NAME) : $(OBJS) $(UTILS_OBJS)
 
 clean :
 	rm -rf $(OBJS) $(UTILS_OBJS)
-	rm -rf ./upload/*
+	rm -rf ./www/html/server_1/imgs/upload*
 
 fclean : clean
 	rm -rf ErrorPages/[0123456789]*.html

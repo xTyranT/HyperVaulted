@@ -22,6 +22,7 @@ class  Request
         std::map<std::string, std::string>  httpHeaders;
         int returnCode;
         int sFd;
+        int sindx;
         std::string file;
         std::string responseBuffer;
         Location matchedLocation;
@@ -38,5 +39,5 @@ class  Request
         bool pathURIChecker(std::string& URI);
         void matchLocation(std::vector<Server>& srv, int whichServer);
         void printRequestComponents(void);
-        Location& matchURIWithLocation(std::vector<Server>& srv);
+        Location& matchURIWithLocation(std::vector<Server>& srv, std::string path);
 };

@@ -94,14 +94,44 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].read = true;
                         Clients[fd].requestHeader = Clients[fd].request.substr(0 , find + 4);
                         Clients[fd].reqRes.requestParser(Clients[fd].requestHeader, sv);
+                        Clients[fd].request = Clients[fd].request.erase(0, find + 4);
+                        Clients[fd].sread -= find + 4;
                     }
                 }
-                else if (events[i].events & EPOLLOUT)
+                if ( Clients[fd].reqRes.Component.method == "POST" && !Clients[fd].enf)
                 {
-                    
+                    if ( Clients[fd].reqRes.returnCode != 200 && Clients[fd].reqRes.returnCode != 301 )
+                        Clients[fd].enf = true;
+                    else
+                        Post( Clients[fd] , buff , rd , sv[Clients[fd].reqRes.sindx]);
                 }
+                else if ( Clients[fd].reqRes.Component.method != "POST" )
+                    Clients[fd].enf = true;
             }
-            
+            else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
+            {
+               if( !Clients[fd].resred )
+               {
+                    std::cout << Clients[fd].reqRes.responseBuffer << std::endl;
+                    Clients[fd].resred = true;
+                    Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                    write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
+               }
+               else{
+                    memset(buff, 0 , 1024);
+                    Clients[fd].resFile.read(buff , 1023);
+                    write(fd, buff, Clients[fd].resFile.gcount());
+               }
+               if ( Clients[fd].resFile.eof())
+               {
+                    if (epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]))
+                    {
+                        std::cout << "ctl del " << std::endl;
+                    }
+                    close(fd);
+                    Clients.erase(fd);
+               }
+            }
             
         }
     }

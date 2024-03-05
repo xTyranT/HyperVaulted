@@ -18,3 +18,5 @@
 #define UPLOADPATH "upload_path"
 #define CGIPATH "cgi_path"
 #define RETURN_ "return"
+
+std::string getFileTemplate(void);

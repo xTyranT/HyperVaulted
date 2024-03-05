@@ -23,7 +23,7 @@ std::vector<Server> getDefaultServer(void)
 
     tmp.port = 8080;
     tmp.host = "localhost";
-    tmp.root = "./";
+    tmp.root = "./www/html/server_1";
     tmp.indexes.push_back("index.html");
     tmp.srvNames.push_back("localhost");
     tmp.maxBodySize = 1024;
@@ -49,7 +49,7 @@ Location::Location(void)
     cgi = false;
     uploadPath = std::string();
     cgiPaths = std::vector<std::pair<std::string, std::string> >();
-    ret = std::map<int, std::string>();
+    ret = std::string();
 }
 
 Location::Location(const Location& other)
@@ -160,14 +160,9 @@ void Location::checkAndStoreLocationAttributes(std::vector<std::string> attr)
     }
     else if (*i == RETURN_)
     {
-        if (attr.size() != 3)
-            throw std::invalid_argument("return must code + url");
-        std::pair<int, std::string> tmp;
-        tmp.first = std::atoi((i + 1)->c_str());
-        if (tmp.first != 301)
-            throw std::invalid_argument("return should be only 301");
-        tmp.second = *(i + 2);
-        ret[301] = tmp.second;
+        if (attr.size() != 2)
+            throw std::invalid_argument("return + <url>");
+        ret = *(i + 1);
     }
     else
         throw std::invalid_argument(*(attr.begin()) + " unknown location variable");
@@ -177,6 +172,9 @@ void Location::checkNecessaryAttributes(void)
 {
     if (methods.empty())
         throw std::invalid_argument("methods must be specified with one of the following:   GET POST DELETE");
+    std::vector<std::string>::iterator i = std::find(methods.begin(), methods.end(), "POST");
+    if (i != methods.end() && upload == false)
+        throw std::invalid_argument("location upload must be on if POST method is on");
     if (upload == true && uploadPath.empty())
         throw std::invalid_argument("location upload_path must be specified");
     if(upload == false && !uploadPath.empty())
@@ -280,8 +278,7 @@ void Server::printServerAttributes(void)
         for (size_t j = 0; j < i->cgiPaths.size(); j++)
             std::cout << i->cgiPaths[j].first << " | " << i->cgiPaths[j].second << "\n";
         std::cout << "redirecting link: ";
-        for (std::map<int, std::string>::iterator j = i->ret.begin(); j != i->ret.end(); j++)
-            std::cout << j->first << " | " << j->second << std::endl;
+        std::cout << i->ret << std::endl;
     }
 }
 

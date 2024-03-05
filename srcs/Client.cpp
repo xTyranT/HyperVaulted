@@ -7,6 +7,7 @@ Client::Client()
     enf = false;
     sread = 0;
     flag = false;
+    resred = false;
     chunksize = 0;
     contentlength = 0;
     fd = 0;
