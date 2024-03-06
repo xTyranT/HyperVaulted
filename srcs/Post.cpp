@@ -93,6 +93,8 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     }
     if ( Clients.chunksize == 0 )
     {
+        std::cout << "here-----------------\n";
+
         Clients.enf = true;
         if ( Clients.reqRes.matchedLocation.cgi )
         {
@@ -100,9 +102,11 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
             postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
             postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
         }
-        else
+        if (!Clients.reqRes.cgi)
         {
+            std::cout << "her" << std::endl;
             Clients.reqRes.returnCode = 201;
+            Clients.reqRes.openErrorPage(srv);
             Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
         }
         Clients.postFile.close();
@@ -152,9 +156,11 @@ void    Post( Client & Clients , char *buff , int rd , Server & srv)
                 postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
                 postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
             }
-            else
+            if (!Clients.reqRes.cgi)
             {
+                std::cout << "her" << std::endl;
                 Clients.reqRes.returnCode = 201;
+                Clients.reqRes.openErrorPage(srv);
                 Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
             }
             Clients.postFile.close();

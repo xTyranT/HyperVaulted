@@ -23,6 +23,7 @@ Client & Client::operator= ( const Client & other )
     contentlength = other.contentlength;
     reqRes = other.reqRes;
     fd = other.fd;
+    resred = other.resred;
     return *this;
 }
 

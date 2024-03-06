@@ -26,6 +26,7 @@ void fillMimeTypes(void)
 Response::Response() : Request()
 {
     responseBuffer = std::string();
+    cgi = false;
 }
 
 Response::Response(const Response& other) : Request(other)
@@ -38,6 +39,7 @@ const Response& Response::operator=(const Response& other)
     Request::operator=(other);
     responseBuffer = other.responseBuffer;
     postCgiFile = other.postCgiFile;
+    cgi = other.cgi;
     return *this;
 }
 
@@ -387,6 +389,7 @@ void Response::formTheResponse(Server& srv, Location& req)
         file = i->second;
     else
         file = generateCorrespondingErrorPage().second;
+    std::cout << "file ========= " << file << std::endl;
     struct stat fileStat;
     stat(file.c_str(), &fileStat);
     responseBuffer.append(to_string(fileStat.st_size));
@@ -397,6 +400,7 @@ void Response::formTheResponse(Server& srv, Location& req)
     else
         responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
     responseBuffer.append("\r\n\r\n");
+    std::cout << "hereopened gfile \n";
 }
 
 Response::~Response()

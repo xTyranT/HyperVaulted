@@ -16,7 +16,7 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     cl.fd = cfd;
     cl.reqRes.sFd = fd;
     Clients[cfd] = cl;
-    gettimeofday(&cl.stime, 0);
+    // gettimeofday(&cl.stime, 0);
     fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
     event.events = EPOLLIN | EPOLLOUT;
@@ -76,7 +76,7 @@ void    multiplexing( std::vector<Server> & sv )
                         close(events[i].data.fd);
             else if ( events[i].events & EPOLLIN )
             {
-                gettimeofday(&Clients[fd].stime, 0);
+                // gettimeofday(&Clients[fd].stime, 0);
                 memset(buff, 0 , 1024);
                 int rd = recv(fd, buff, 1023, 0);
                 if (!Clients[fd].flag)
@@ -111,11 +111,14 @@ void    multiplexing( std::vector<Server> & sv )
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
             {
-                gettimeofday(&Clients[fd].stime, 0);
+                std::cout << "epoll out \n";
+                // gettimeofday(&Clients[fd].stime, 0);
+                 std::cout << "fd = " << fd  << Clients[fd].resred << std::endl;
                 if( !Clients[fd].resred )
                 {
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                    std::cout << "res file = " << Clients[fd].reqRes.file.c_str() << std::endl;
                     if ( !Clients[fd].resFile.is_open() )
                     {
                         std::cout << "open " << strerror(errno) << std::endl;
@@ -135,19 +138,20 @@ void    multiplexing( std::vector<Server> & sv )
                     {
                         std::cout << "ctl del " << std::endl;
                     }
+                    // Clients.
                     close(fd);
                     Clients.erase(fd);
                 }
             }
-            gettimeofday(&Clients[fd].etime, 0);
-            if ( Clients[fd].etime.tv_sec - Clients[fd].stime.tv_sec >= 10 )
-            {
-                Clients[fd].enf = true;
-                Clients[fd].reqRes.returnCode = 408;
-                std::cout << Clients[fd].reqRes.sindx << std::endl;
-                Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
-                Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
-            }
+            // gettimeofday(&Clients[fd].etime, 0);
+            // if ( Clients[fd].etime.tv_sec - Clients[fd].stime.tv_sec >= 10 )
+            // {
+            //     Clients[fd].enf = true;
+            //     Clients[fd].reqRes.returnCode = 408;
+            //     std::cout << Clients[fd].reqRes.sindx << std::endl;
+            //     Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
+            //     Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
+            // }
         }
     }
 }

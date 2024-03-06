@@ -42,6 +42,8 @@ char** Cgi::getEnv(Server& srv, Response& res)
     else
         env[5] = strdup((tmp[5] + "=").c_str());
     env[6] = NULL;
+    for(int i = 0; i < 6; i++)
+        std::cout << env[i] << std::endl;
     return env;
 }
 
@@ -63,7 +65,6 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
         return NULL;
     }
     std::string fileName(absPath);
-    std::cout << fileName << "        file\n";
     std::string ext = fileName.substr(fileName.rfind("."));
 
     for(; it != req.cgiPaths.end(); it++)
@@ -84,6 +85,8 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
 
 void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
 {
+    if (!res.cgi)
+        return;
     std::cout << "formCgiResponse" << std::endl;
     struct stat fileStat;
     stat((srv.root + "/cgi.cgi").c_str(), &fileStat);
@@ -91,8 +94,12 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
     res.responseBuffer.append(to_string(res.returnCode) + " ");
     res.responseBuffer.append(res.errorPageMessage() + "\r\n");
     std::fstream file;
-    file.open(res.file.c_str());
+    if (res.Component.method == "POST")
+        file.open(res.postCgiFile.c_str());
+    else
+        file.open(res.file.c_str());
     std::cout << "file : " << res.file << std::endl;    
+    std::cout << "file : " << res.postCgiFile << std::endl;    
     if (!file.is_open())
     {
         res.returnCode = 500;
@@ -113,10 +120,13 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
     char **argv = getArgv(srv, res, req);
     if (!argv || res.returnCode != 200)
     {
+        std::cout << "cgi false\n";
+        res.cgi = false;
         delete[] env;
         delete[] argv;
         return;
     }
+    std::cout << "=========================================" << res.postCgiFile << std::endl;
     pid = fork();
     if (pid < 0)
     {
@@ -167,6 +177,8 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
     delete[] env;
     delete[] argv; 
     res.returnCode = 200;
+    std::cout << "cgi done\n";
+    res.cgi = true;
     res.file = srv.root + "/cgi.cgi";
     return;
 }
