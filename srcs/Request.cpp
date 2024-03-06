@@ -45,6 +45,7 @@ const Request& Request::operator=(const Request& other)
     httpHeaders = other.httpHeaders;
     returnCode = other.returnCode;
     sFd = other.sFd;
+    sindx = other.sindx;
     return *this;
 }
 
@@ -116,6 +117,8 @@ std::string Request::errorPageMessage(void)
         return std::string("Created");
     if (returnCode == 411)
         return std::string("Length Required");
+    if (returnCode == 408 )
+        return std::string("Request Timeout");
     return std::string();
 }
 
@@ -195,11 +198,45 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv, std::string pa
     throw std::invalid_argument("no match");
 }
 
+void Request::checkAllowdUriCharacters(std::string uri)
+{
+    for(size_t i = 0; i < uri.size(); i++)
+    {
+        if (!std::isprint(uri[i]))
+        {
+            returnCode = 400;
+            throw std::invalid_argument("invalid uri");
+        }
+        if (uri[i] == '%')
+        {
+            i++;
+            while(std::isdigit(uri[i]) || (uri[i] >= 'A' && uri[i] <= 'F'))
+            {
+                i++;
+                int j = 0;
+                j++;
+                if (j > 2)
+                    break;
+            }
+            std::string str = uri.substr(i - 2, 2);
+            std::stringstream ss(str);
+            int x;
+            ss >> std::hex >> x;
+            if (x < 33 || x > 126)
+            {
+                returnCode = 400;
+                throw std::invalid_argument("invalid uri");
+            }
+        }
+    }
+}
+
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
     Location match;
     try
     {
+        checkAllowdUriCharacters(Component.path);
         match = matchURIWithLocation(srv, Component.path);
         matchedLocation = match;
         if (!match.ret.empty())
@@ -240,7 +277,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
     }
     catch(const std::exception& e)
     {
-        std::cout << e.what() << std::endl;
         std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
         if (absPath != "/")
             returnCode = 404;
@@ -252,7 +288,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
-    std::cout << "request: " << request << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
     {

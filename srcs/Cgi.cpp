@@ -50,7 +50,11 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
     char **argv = new char*[3];
 
     std::vector<std::pair<std::string, std::string> >::iterator it = req.cgiPaths.begin();
-    char* absPath = realpath((srv.root + res.Component.path).c_str(), NULL);
+    char* absPath = NULL;
+    if (res.Component.method == "POST")
+        absPath = realpath(res.postCgiFile.c_str(), NULL);
+    else
+        absPath = realpath((srv.root + res.Component.path).c_str(), NULL);
     if (absPath == NULL)
     {
         delete[] argv;
@@ -106,6 +110,12 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
     {
         delete[] env;
         delete[] argv;
+        if (!argv)
+        {
+            res.returnCode = 201;
+            res.openErrorPage(srv);
+            res.formTheResponse(srv, req);
+        }
         return;
     }
     pid = fork();
@@ -116,21 +126,33 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
         delete[] argv;
         return;
     }
+    int pipeFd[2];
+    if (pipe(pipeFd) < 0)
+    {
+        res.returnCode = 500;
+        delete[] env;
+        delete[] argv;
+        res.openErrorPage(srv);
+        res.formTheResponse(srv, req);
+        return;
+    }
     else if (pid == 0)
     {
         FILE* fd = freopen((srv.root + "/cgi.cgi").c_str(), "w+", stdout);
         if (!fd)
             exit(EXIT_FAILURE);
-        if (res.Component.method == "POST")
+        if (res.Component.method == "POST" )
         {
-            FILE* fd2 = freopen((srv.root + "/cgi.cgi").c_str() /* post file*/, "w+", stdin);
-            if (!fd2)
+            FILE* in = freopen(res.postCgiFile.c_str(), "w+", stdin);
+            if (!in)
                 exit(EXIT_FAILURE);
         }
         execve(argv[0], argv, env);
         exit(EXIT_FAILURE);
     }
     waitpid(pid, &status, 0);
+    close(pipeFd[0]);
+    close(pipeFd[1]);
     if (res.Component.method == "POST")
         fclose(stdin);
     if (status == EXIT_FAILURE)
@@ -142,6 +164,8 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
         res.formTheResponse(srv, req);
         return;
     }
+    delete[] env;
+    delete[] argv; 
     res.returnCode = 200;
     res.file = srv.root + "/cgi.cgi";
     return;

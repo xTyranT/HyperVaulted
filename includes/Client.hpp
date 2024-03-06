@@ -7,11 +7,14 @@
 class   Client
 {   
     public:
-    int sfd;
+        int sfd;
         int fd;
-        int chunksize;
-        int contentlength;
-        int sread;
+        long long chunksize;
+        long long contentlength;
+        long long sread;
+        clock_t start;
+        clock_t end;
+        std::string postpath;
         std::string chunkedbuff;
         std::string request;
         std::string requestHeader;
@@ -22,6 +25,7 @@ class   Client
 
         bool read;
         bool flag;
+        bool requestclosed;
         bool enf;
         bool resred;
         Client & operator= ( const Client & other );

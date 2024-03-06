@@ -32,6 +32,8 @@
 #include <sys/stat.h>
 #include <limits.h>
 #include <linux/limits.h>
+#include <sys/time.h>
+
 
 std::string to_string(int value);
 void strtrim(std::string& s, std::string set);

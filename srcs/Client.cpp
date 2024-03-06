@@ -11,6 +11,7 @@ Client::Client()
     chunksize = 0;
     contentlength = 0;
     fd = 0;
+    requestclosed = false;
 }
 
 Client & Client::operator= ( const Client & other )
@@ -23,6 +24,8 @@ Client & Client::operator= ( const Client & other )
     contentlength = other.contentlength;
     reqRes = other.reqRes;
     fd = other.fd;
+    start = other.start;
+    end = other.end;
     return *this;
 }
 

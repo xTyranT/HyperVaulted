@@ -4,7 +4,9 @@
 
 class Response : public Request
 {
-    public:        
+    public:
+        std::string postCgiFile;
+        
         Response();
         Response(const Response& other);
         const Response& operator=(const Response& other);
