@@ -107,19 +107,16 @@ void    multiplexing( std::vector<Server> & sv )
                     else
                         Post( Clients[fd] , buff , rd, sv[Clients[fd].reqRes.sindx]);
                 }
-                else if ( Clients[fd].reqRes.Component.method != "POST" )
+                else if ( Clients[fd].reqRes.Component.method != "POST" && Clients[fd].read )
                     Clients[fd].enf = true;
             }
-            else if ( events[i].events & EPOLLOUT && Clients[fd].enf)
+            else if ( events[i].events & EPOLLOUT && Clients[fd].enf) 
             {
-                std::cout << "epoll out \n";
-                // gettimeofday(&Clients[fd].stime, 0);
-                 std::cout << "fd = " << fd  << Clients[fd].resred << std::endl;
                 if( !Clients[fd].resred )
                 {
                     Clients[fd].resred = true;
                     Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
-                    std::cout << "res file = " << Clients[fd].reqRes.file.c_str() << std::endl;
+                    std::cout << "file " << Clients[fd].reqRes.file << std::endl;
                     if ( !Clients[fd].resFile.is_open() )
                     {
                         std::cout << "open " << strerror(errno) << std::endl;
@@ -139,7 +136,6 @@ void    multiplexing( std::vector<Server> & sv )
                     {
 
                     }
-                    // Clients.
                     close(fd);
                     Clients[fd].requestclosed = true;
                     Clients.erase(fd);
