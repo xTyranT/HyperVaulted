@@ -12,8 +12,8 @@ class   Client
         long long chunksize;
         long long contentlength;
         long long sread;
-        struct timeval stime;
-        struct timeval etime;
+        clock_t start;
+        clock_t end;
         std::string postpath;
         std::string chunkedbuff;
         std::string request;
@@ -25,6 +25,7 @@ class   Client
 
         bool read;
         bool flag;
+        bool requestclosed;
         bool enf;
         bool resred;
         Client & operator= ( const Client & other );

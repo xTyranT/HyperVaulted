@@ -103,7 +103,9 @@ void Response::listDirFiles(std::string path)
     responseBuffer.append("\r\n");
     responseBuffer.append("Content-Type: text/html\r\n");
     responseBuffer.append("\r\n");
-    responseBuffer.append(tmp);
+    std::fstream  listdir("/tmp/listdir.html", std::ios::out);
+    listdir << tmp;
+    file = "/tmp/listdir.html";
 }
 
 void Response::formChunkedResponse(Location& req, Server& srv)
@@ -199,6 +201,7 @@ void Response::getMethod(Location& req, Server& srv)
             }
             else
             {
+                std::cout << "FILE" << std::endl;
                 std::ifstream file((req.root + Component.path).c_str());
                 if (!file.is_open())
                 {

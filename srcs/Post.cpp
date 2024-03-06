@@ -51,6 +51,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     std::string str;
     if ( !Clients.flag )
     {
+        std::cout << Clients.request << std::endl;
         Clients.flag = true;
         std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath);
         Clients.reqRes.postCgiFile = fname;
@@ -58,6 +59,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
 
         if (Clients.postFile.fail())
         {
+            std::cout<< "open " << fname << std::endl;
             Clients.reqRes.returnCode = 500;
             Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
             Clients.enf = true;
@@ -80,6 +82,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     }
     else
     {
+        std::cout << buff << std::endl;
         Clients.request.append( buff , rd);
         if ( Clients.chunksize < (int)Clients.request.size() && Clients.request.find("\r\n", Clients.chunksize + 2) != std::string::npos )
         {
@@ -100,7 +103,8 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
         {
             Cgi postCgi;
             postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
-            postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+            if (Clients.reqRes.returnCode == 200)
+                postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
         }
         if (!Clients.reqRes.cgi)
         {
@@ -154,7 +158,8 @@ void    Post( Client & Clients , char *buff , int rd , Server & srv)
             {
                 Cgi postCgi;
                 postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
-                postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+                if (Clients.reqRes.returnCode == 200)
+                    postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
             }
             if (!Clients.reqRes.cgi)
             {

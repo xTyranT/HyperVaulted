@@ -2,7 +2,7 @@
 
 Cgi::Cgi()
 {
-
+    
 }
 
 Cgi::Cgi(const Cgi &other)
@@ -57,7 +57,6 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
         absPath = realpath(res.postCgiFile.c_str(), NULL);
     else
         absPath = realpath((srv.root + res.Component.path).c_str(), NULL);
-    std::cout << "here+++++++++++++++++\n";
     if (absPath == NULL)
     {
         delete[] argv;
@@ -100,6 +99,7 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
         file.open(res.file.c_str());
     std::cout << "file : " << res.file << std::endl;    
     std::cout << "file : " << res.postCgiFile << std::endl;    
+    file.open(res.file.c_str());   
     if (!file.is_open())
     {
         res.returnCode = 500;
@@ -113,7 +113,6 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
 
 void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
 {
-    std::cout << "cgiCaller" << std::endl;
     pid_t pid;
     int status;
     char **env = getEnv(srv, res);
@@ -124,6 +123,12 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
         res.cgi = false;
         delete[] env;
         delete[] argv;
+        if (!argv)
+        {
+            res.returnCode = 201;
+            res.openErrorPage(srv);
+            res.formTheResponse(srv, req);
+        }
         return;
     }
     std::cout << "=========================================" << res.postCgiFile << std::endl;
@@ -147,9 +152,8 @@ void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
     }
     else if (pid == 0)
     {
-        std::cout << "child process" << std::endl;
-        FILE* out = freopen((srv.root + "/cgi.cgi").c_str(), "w+", stdout);
-        if (!out)
+        FILE* fd = freopen((srv.root + "/cgi.cgi").c_str(), "w+", stdout);
+        if (!fd)
             exit(EXIT_FAILURE);
         if (res.Component.method == "POST" )
         {

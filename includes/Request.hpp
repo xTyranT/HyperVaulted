@@ -38,6 +38,7 @@ class  Request
         std::string errorPageMessage(void);
         bool pathURIChecker(std::string& URI);
         void matchLocation(std::vector<Server>& srv, int whichServer);
+        void checkAllowdUriCharacters(std::string uri);
         void printRequestComponents(void);
         Location& matchURIWithLocation(std::vector<Server>& srv, std::string path);
 };

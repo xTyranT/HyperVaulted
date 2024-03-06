@@ -68,8 +68,8 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 411;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
-        return 400;
+    // if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
+    //     return 400;
     i =  httpHeaders.find("Content-Type");
     if ( i != httpHeaders.end() && i->second.find("multipart/form-data") != std::string::npos)
         return 501;
@@ -77,8 +77,6 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 400;
     if (Component.path.size() > 2048)
         return 414;
-    if (pathURIChecker(Component.path))
-        return 400;
     int cl;
     std::map<std::string, std::string>::iterator it = httpHeaders.find("Content-Length");
         if (it != httpHeaders.end())
@@ -198,11 +196,45 @@ Location& Request::matchURIWithLocation(std::vector<Server>& srv, std::string pa
     throw std::invalid_argument("no match");
 }
 
+void Request::checkAllowdUriCharacters(std::string uri)
+{
+    for(size_t i = 0; i < uri.size(); i++)
+    {
+        if (!std::isprint(uri[i]))
+        {
+            returnCode = 400;
+            throw std::invalid_argument("invalid uri");
+        }
+        if (uri[i] == '%')
+        {
+            i++;
+            while(std::isdigit(uri[i]) || (uri[i] >= 'A' && uri[i] <= 'F'))
+            {
+                i++;
+                int j = 0;
+                j++;
+                if (j > 2)
+                    break;
+            }
+            std::string str = uri.substr(i - 2, 2);
+            std::stringstream ss(str);
+            int x;
+            ss >> std::hex >> x;
+            if (x < 33 || x > 126)
+            {
+                returnCode = 400;
+                throw std::invalid_argument("invalid uri");
+            }
+        }
+    }
+}
+
 void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 {
     Location match;
     try
     {
+        // checkAllowdUriCharacters(Component.path);
         match = matchURIWithLocation(srv, Component.path);
         matchedLocation = match;
         if (!match.ret.empty())
@@ -243,7 +275,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
     }
     catch(const std::exception& e)
     {
-        std::cout << e.what() << std::endl;
         std::string absPath = Component.path.substr(0, Component.path.rfind('/') + 1);
         if (absPath != "/")
             returnCode = 404;
@@ -255,7 +286,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
-    std::cout << "request: " << request << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
     {

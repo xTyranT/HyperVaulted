@@ -16,7 +16,7 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
     cl.fd = cfd;
     cl.reqRes.sFd = fd;
     Clients[cfd] = cl;
-    // gettimeofday(&cl.stime, 0);
+    cl.start = clock();
     fcntl(cfd, F_SETFL, O_NONBLOCK);
     event.data.fd = cfd;
     event.events = EPOLLIN | EPOLLOUT;
@@ -76,7 +76,8 @@ void    multiplexing( std::vector<Server> & sv )
                         close(events[i].data.fd);
             else if ( events[i].events & EPOLLIN )
             {
-                // gettimeofday(&Clients[fd].stime, 0);
+        
+                Clients[fd].start = clock();
                 memset(buff, 0 , 1024);
                 int rd = recv(fd, buff, 1023, 0);
                 if (!Clients[fd].flag)
@@ -104,7 +105,7 @@ void    multiplexing( std::vector<Server> & sv )
                     if ( Clients[fd].reqRes.returnCode != 200 && Clients[fd].reqRes.returnCode != 301 )
                         Clients[fd].enf = true;
                     else
-                        Post( Clients[fd] , buff , rd , sv[Clients[fd].reqRes.sindx]);
+                        Post( Clients[fd] , buff , rd, sv[Clients[fd].reqRes.sindx]);
                 }
                 else if ( Clients[fd].reqRes.Component.method != "POST" )
                     Clients[fd].enf = true;
@@ -136,21 +137,26 @@ void    multiplexing( std::vector<Server> & sv )
                 {
                     if ( !epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]) )
                     {
-                        std::cout << "ctl del " << std::endl;
+
                     }
                     // Clients.
                     close(fd);
+                    Clients[fd].requestclosed = true;
                     Clients.erase(fd);
                 }
             }
-            // gettimeofday(&Clients[fd].etime, 0);
-            // if ( Clients[fd].etime.tv_sec - Clients[fd].stime.tv_sec >= 10 )
+            // if ( Clients.find(fd) != Clients.end())
             // {
-            //     Clients[fd].enf = true;
-            //     Clients[fd].reqRes.returnCode = 408;
-            //     std::cout << Clients[fd].reqRes.sindx << std::endl;
-            //     Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
-            //     Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
+            //     Clients[fd].end = clock();
+            //     if ( !Clients[fd].enf  && (double)(Clients[fd].end - Clients[fd].start) / CLOCKS_PER_SEC  > 3 )
+            //     {
+            //         std::cout << "timeout" << std::endl;
+            //         Clients[fd].enf = true;
+            //         Clients[fd].reqRes.returnCode = 408;
+            //         std::cout << "fd" << fd << std::endl;
+            //         Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
+            //         Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
+            //     }
             // }
         }
     }
