@@ -6,7 +6,10 @@ class Response : public Request
 {
     public:
         std::string postCgiFile;
+        pid_t clientPid;
         bool cgi;
+        bool cgiProcessing;
+
         
         Response();
         Response(const Response& other);

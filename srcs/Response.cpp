@@ -27,6 +27,7 @@ Response::Response() : Request()
 {
     responseBuffer = std::string();
     cgi = false;
+    cgiProcessing = false;
 }
 
 Response::Response(const Response& other) : Request(other)
@@ -40,6 +41,8 @@ const Response& Response::operator=(const Response& other)
     responseBuffer = other.responseBuffer;
     postCgiFile = other.postCgiFile;
     cgi = other.cgi;
+    clientPid = other.clientPid;
+    cgiProcessing = other.cgiProcessing;
     return *this;
 }
 
@@ -201,7 +204,6 @@ void Response::getMethod(Location& req, Server& srv)
             }
             else
             {
-                std::cout << "FILE" << std::endl;
                 std::ifstream file((req.root + Component.path).c_str());
                 if (!file.is_open())
                 {
@@ -262,7 +264,6 @@ void Response::openErrorPage(Server& srv)
             generateCorrespondingErrorPage();
             file = "./ErrorPages/" + to_string(returnCode) + ".html";
             srv.errPages.erase(returnCode);
-            std::cout << "ERROR PAGE NOT FOUND" << std::endl;
             return;
         }
     }
@@ -337,6 +338,17 @@ void Response::deleteDirectory(std::string path, Location& req, Server& srv)
 void Response::deleteMethod(Location& req, Server& srv)
 {
     std::string fullPath = req.root + Component.path;
+    char *path = realpath(fullPath.c_str(), NULL);
+    std::string realPath = path;
+    char *root = realpath(req.root.c_str(), NULL);
+    std::string rootPath = root;
+    if (fullPath.compare(0, rootPath.size(), root) != 0)
+    {
+        returnCode = 403;
+        openErrorPage(srv);
+        formTheResponse(srv, req);
+        return;
+    }
     if (!validPath(fullPath))
     {
         returnCode = 404;
@@ -392,7 +404,7 @@ void Response::formTheResponse(Server& srv, Location& req)
         file = i->second;
     else
         file = generateCorrespondingErrorPage().second;
-    std::cout << "file ========= " << file << std::endl;
+    std::cout << "file : " << file << std::endl;
     struct stat fileStat;
     stat(file.c_str(), &fileStat);
     responseBuffer.append(to_string(fileStat.st_size));
@@ -403,7 +415,6 @@ void Response::formTheResponse(Server& srv, Location& req)
     else
         responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
     responseBuffer.append("\r\n\r\n");
-    std::cout << "hereopened gfile \n";
 }
 
 Response::~Response()

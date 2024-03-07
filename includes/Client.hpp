@@ -31,4 +31,5 @@ class   Client
         Client & operator= ( const Client & other );
         Client (const Client & other );
         Client ();
+        ~Client ();
 };

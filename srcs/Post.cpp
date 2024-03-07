@@ -39,9 +39,7 @@ std::string gnExtencion( std::string contentType ,  std::string path )
             break;
         }
     }
-    std::cout << path << std::endl;
     std::string s =  path + itos() + ex;
-    std::cout << "path " << s << std::endl;
     return s;
 }
 
@@ -51,7 +49,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     std::string str;
     if ( !Clients.flag )
     {
-        std::cout << Clients.request << std::endl;
         Clients.flag = true;
         std::string fname = gnExtencion( Clients.reqRes.httpHeaders["Content-Type"], Clients.reqRes.matchedLocation.uploadPath);
         Clients.reqRes.postCgiFile = fname;
@@ -82,7 +79,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     }
     else
     {
-        std::cout << buff << std::endl;
         Clients.request.append( buff , rd);
         if ( Clients.chunksize < (int)Clients.request.size() && Clients.request.find("\r\n", Clients.chunksize + 2) != std::string::npos )
         {
@@ -96,8 +92,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
     }
     if ( Clients.chunksize == 0 )
     {
-        std::cout << "here-----------------\n";
-
         Clients.enf = true;
         if ( Clients.reqRes.matchedLocation.cgi )
         {
@@ -108,7 +102,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
         }
         if (!Clients.reqRes.cgi)
         {
-            std::cout << "her" << std::endl;
             Clients.reqRes.returnCode = 201;
             Clients.reqRes.openErrorPage(srv);
             Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
@@ -156,6 +149,7 @@ void    Post( Client & Clients , char *buff , int rd , Server & srv)
             Clients.enf = true;
             if ( Clients.reqRes.matchedLocation.cgi )
             {
+                std::cout << "cgi" << std::endl;
                 Cgi postCgi;
                 postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
                 if (Clients.reqRes.returnCode == 200)
@@ -163,7 +157,7 @@ void    Post( Client & Clients , char *buff , int rd , Server & srv)
             }
             if (!Clients.reqRes.cgi)
             {
-                std::cout << "her" << std::endl;
+                std::cout << "no cgi" << std::endl;
                 Clients.reqRes.returnCode = 201;
                 Clients.reqRes.openErrorPage(srv);
                 Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);

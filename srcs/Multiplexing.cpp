@@ -29,6 +29,8 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
 void    multiplexing( std::vector<Server> & sv )
 {
     char buff[1024];
+    pid_t cgiPid;
+    int status;
     struct epoll_event ev, events[MAX_EVENTS];
     std::vector<int> sfds;
     std::map<int, class Client> Clients;
@@ -112,33 +114,53 @@ void    multiplexing( std::vector<Server> & sv )
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf) 
             {
-                if( !Clients[fd].resred )
+                if (Clients[fd].reqRes.matchedLocation.cgi && Clients[fd].reqRes.Component.method != "DELETE")
                 {
-                    Clients[fd].resred = true;
-                    Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
-                    std::cout << "file " << Clients[fd].reqRes.file << std::endl;
-                    if ( !Clients[fd].resFile.is_open() )
+                    cgiPid = waitpid(Clients[fd].reqRes.clientPid, &status, WNOHANG);
+                    if (cgiPid == -1)
                     {
-                        std::cout << "open " << strerror(errno) << std::endl;
-                        exit(EXIT_FAILURE);
+                        std::cout << "waitpid " << std::endl;
+                        Clients[fd].reqRes.cgiProcessing = false;
+                        Clients[fd].reqRes.returnCode = 500;
+                        Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
+                        Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
+                        close(fd);
+                        Clients.erase(fd);
                     }
-                    write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
-                    
-               }
-               else{
-                    memset(buff, 0 , 1024);
-                    Clients[fd].resFile.read(buff , 1023);
-                    write(fd, buff, Clients[fd].resFile.gcount());
+                    if (cgiPid == 0)
+                        Clients[fd].reqRes.cgiProcessing = true;
                 }
-                if ( Clients[fd].resFile.eof())
+                else
                 {
-                    if ( !epoll_ctl( efd , EPOLL_CTL_DEL , fd , &events[i]) )
+                    Clients[fd].reqRes.cgiProcessing = false;
+                    if( !Clients[fd].resred )
                     {
-
+                        std::cout << "resred" << std::endl;
+                        Clients[fd].resred = true;
+                        Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                        std::cout << "file : " << Clients[fd].reqRes.file << std::endl;
+                        if ( !Clients[fd].resFile.is_open() )
+                        {
+                            std::cout << "open " << strerror(errno) << std::endl;
+                            exit(EXIT_FAILURE);
+                        }
+                        write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
+                        memset(buff, 0 , 1024);
+                        Clients[fd].resFile.read(buff , 1023);
+                        write(fd, buff, Clients[fd].resFile.gcount());
                     }
-                    close(fd);
-                    Clients[fd].requestclosed = true;
-                    Clients.erase(fd);
+                    else{
+                        memset(buff, 0 , 1024);
+                        Clients[fd].resFile.read(buff , 1023);
+                        write(fd, buff, Clients[fd].resFile.gcount());
+                    }
+                    if ( Clients[fd].resFile.eof())
+                    {
+                        epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL);
+                        close(fd);
+                        Clients[fd].requestclosed = true;
+                        Clients.erase(fd);
+                    }
                 }
             }
             // if ( Clients.find(fd) != Clients.end())
