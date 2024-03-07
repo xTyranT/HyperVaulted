@@ -433,11 +433,13 @@ void Server::serverBlock(std::ifstream& file)
             brackets.pop();
             break;
         }
-        else
+        else if (!brackets.empty())
         {
             std::vector<std::string> vec = split(line);
             checkAndStoreServerAttributes(vec, file);
         }
+        else
+            throw std::invalid_argument("config file requires a server block: \nserver\n{\n  ...\n}");
     }
     if (!brackets.empty())
         throw std::invalid_argument("opened bracket not closed");

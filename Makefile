@@ -36,10 +36,9 @@ $(NAME) : $(OBJS) $(UTILS_OBJS)
 
 clean :
 	rm -rf $(OBJS) $(UTILS_OBJS)
-	rm -rf ./www/html/server_1/upload/*
+	rm -rf ErrorPages/[0123456789]*.html
 
 fclean : clean
-	rm -rf ErrorPages/[0123456789]*.html
 	rm -rf $(NAME)
 	rm -rf $(OBJSDIR)
 

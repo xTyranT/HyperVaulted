@@ -245,17 +245,6 @@ void Response::openErrorPage(Server& srv)
         std::ifstream openFile(i->second.c_str());
         if (openFile.is_open())
         {
-            struct stat fileStat;
-            stat(i->second.c_str(), &fileStat);
-            responseBuffer.append(Component.httpVersion + " ");
-            responseBuffer.append(to_string(returnCode) + " ");
-            responseBuffer.append(errorPageMessage() + "\r\n");
-            responseBuffer.append("Content-Length: ");
-            responseBuffer.append(to_string(fileStat.st_size));
-            responseBuffer.append("\r\n");
-            responseBuffer.append("Content-Type: ");
-            responseBuffer.append(determineFileExtension(i->second));
-            responseBuffer.append("\r\n");
             file = i->second;
             return;
         }
@@ -338,26 +327,29 @@ void Response::deleteDirectory(std::string path, Location& req, Server& srv)
 void Response::deleteMethod(Location& req, Server& srv)
 {
     std::string fullPath = req.root + Component.path;
-    char *path = realpath(fullPath.c_str(), NULL);
-    std::string realPath = path;
-    char *root = realpath(req.root.c_str(), NULL);
-    std::string rootPath = root;
-    if (fullPath.compare(0, rootPath.size(), root) != 0)
+    if (!validPath(fullPath))
     {
-        returnCode = 403;
+        std::cout << "Invalid path" << std::endl;
+        returnCode = 404;
         openErrorPage(srv);
         formTheResponse(srv, req);
         return;
     }
-    if (!validPath(fullPath))
+    char *path = realpath(fullPath.c_str(), NULL);
+    std::string realPath = path;
+    char *root = realpath(srv.root.c_str(), NULL);
+    std::string rootPath = root;
+    if (realPath.compare(0, rootPath.size(), rootPath) != 0)
     {
-        returnCode = 404;
+        std::cout << "Forbidden" << std::endl;
+        returnCode = 403;
         openErrorPage(srv);
         formTheResponse(srv, req);
         return;
     }
     if (isDirectory(fullPath))
     {
+        std::cout << "Directory" << std::endl;
         if (Component.path[Component.path.size() - 1] != '/')
         {
             returnCode = 409;
@@ -373,8 +365,10 @@ void Response::deleteMethod(Location& req, Server& srv)
     }
     else
     {
+        std::cout << "File" << std::endl;
         if (remove(fullPath.c_str()) == -1)
         {
+            std::cout << strerror(errno) << std::endl;
             returnCode = 403;
             openErrorPage(srv);
             formTheResponse(srv, req);
@@ -404,7 +398,6 @@ void Response::formTheResponse(Server& srv, Location& req)
         file = i->second;
     else
         file = generateCorrespondingErrorPage().second;
-    std::cout << "file : " << file << std::endl;
     struct stat fileStat;
     stat(file.c_str(), &fileStat);
     responseBuffer.append(to_string(fileStat.st_size));

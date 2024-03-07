@@ -15,6 +15,8 @@ int main(int argc, char** argv)
         std::vector<Server> sv = getAvailableServers(file);
         if (sv.empty())
             sv = getDefaultServer();
+        // for(size_t i = 0; i < sv.size(); i++)
+        //     sv[i].printServerAttributes();
         fillMimeTypes();
         multiplexing(sv);
     }
