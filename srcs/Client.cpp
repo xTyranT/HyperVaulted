@@ -20,6 +20,7 @@ Client::Client()
     requestclosed = false;
     enf = false;
     resred = false;
+    cgi = Cgi();
 }
 
 Client & Client::operator= ( const Client & other )
@@ -42,6 +43,7 @@ Client & Client::operator= ( const Client & other )
     requestclosed = other.requestclosed;
     enf = other.enf;
     resred = other.resred;
+    cgi = other.cgi;
     return *this;
 }
 

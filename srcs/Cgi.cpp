@@ -2,7 +2,16 @@
 
 Cgi::Cgi()
 {
-    
+    pid = -1;
+    executed = false;
+    status = -1;
+    env = NULL;
+    argv = NULL;
+    out = NULL;
+    in = NULL;
+    start = -1;
+    end = -1;
+    cgiPid = -1;
 }
 
 Cgi::Cgi(const Cgi &other)
@@ -12,7 +21,16 @@ Cgi::Cgi(const Cgi &other)
 
 const Cgi& Cgi::operator=(const Cgi& other)
 {
-    (void)other;
+    pid = other.pid;
+    executed = other.executed;
+    status = other.status;
+    env = other.env;
+    argv = other.argv;
+    out = other.out;
+    in = other.in;
+    start = other.start;
+    end = other.end;
+    cgiPid = other.cgiPid;
     return *this;
 }
 
@@ -44,7 +62,12 @@ char** Cgi::getEnv(Server& srv, Response& res)
         env[5] = strdup((tmp[5] + "=" + res.httpHeaders.find("Cookie")->second).c_str());
     else
         env[5] = strdup((tmp[5] + "=").c_str());
-    env[6] = strdup((tmp[6] + "=" + res.httpHeaders.find("Content-Length")->second).c_str());
+
+    std::map<std::string, std::string>::iterator it3 = res.httpHeaders.find("Content-Length");
+    if (it3 != res.httpHeaders.end())
+        env[6] = strdup((tmp[6] + "=" + res.httpHeaders.find("Content-Length")->second).c_str());
+    else
+        env[6] = strdup((tmp[6] + "=").c_str());
     env[7] = NULL;
     return env;
 }
@@ -63,8 +86,15 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
         return NULL;
     }
     std::string fileName(absPath);
-    std::string ext = fileName.substr(fileName.rfind("."));
-
+    std::string ext;
+    try
+    {
+        ext = fileName.substr(fileName.rfind("."));
+    }
+    catch(const std::exception& e)
+    {
+        ext = "";
+    }
     for(; it != req.cgiPaths.end(); it++)
     {
         if (ext == it->first)
@@ -83,10 +113,9 @@ char** Cgi::getArgv(Server& srv, Response& res, Location& req)
 
 void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
 {
-    if (!res.cgi)
-        return;
     struct stat fileStat;
     stat((srv.root + "/cgi").c_str(), &fileStat);
+    res.responseBuffer = "";
     res.responseBuffer.append(res.Component.httpVersion + " ");
     res.responseBuffer.append(to_string(res.returnCode) + " ");
     res.responseBuffer.append(res.errorPageMessage() + "\r\n");
@@ -94,12 +123,9 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
     if (res.Component.method == "POST")
         file.open(res.postCgiFile.c_str());
     else
-        file.open(res.file.c_str());    
-    std::cout << "file : " << res.file << std::endl;
-    std::cout << "post file : " << res.postCgiFile << std::endl;
+        file.open(res.file.c_str());
     if (!file.is_open())
     {
-        std::cout << "cgi response file\n";
         res.returnCode = 500;
         res.openErrorPage(srv);
         res.formTheResponse(srv, req);
@@ -109,58 +135,97 @@ void Cgi::formCgiResponse(Server& srv, Location& req, Response& res)
     return;
 }
 
-void Cgi::cgiCaller(Server& srv, Location& req, Response& res)
+void Cgi::cgiCaller(Server& srv, Location& req, Response& res, bool& enf)
 {
-    FILE* out = NULL;
-    FILE* in = NULL;
-    char **env = getEnv(srv, res);
-    char **argv = getArgv(srv, res, req);
-    if (!argv || res.returnCode != 200)
+    if (!executed)
     {
-        res.cgi = false;
-        delete[] env;
-        delete[] argv;
-        return;
-    }
-    res.clientPid = fork();
-    if (res.clientPid == 0)
-    {
-        out = freopen((srv.root + "/cgi").c_str(), "w", stdout);
-        if (!out)
-            exit(EXIT_FAILURE);
-        if (res.Component.method == "POST")
+        start = clock();
+        res.cgiProcessing = true;
+        executed = true;
+        out = NULL;
+        in = NULL;
+        env = getEnv(srv, res);
+        argv = getArgv(srv, res, req);
+        if (res.returnCode != 200)
         {
-            in = freopen(res.postCgiFile.c_str(), "r", stdin);
-            if (!in)
-                exit(EXIT_FAILURE);
+            res.openErrorPage(srv);
+            res.formTheResponse(srv, req);
+            res.cgiProcessing = false;
+            res.cgi = false;
+            enf = true;
+            delete[] env;
+            delete[] argv;
+            return;
         }
-        execve(argv[0], argv, env);
-        exit(EXIT_FAILURE);
+        if (!argv)
+        {
+            res.cgiProcessing = false;
+            req.cgi = false;
+            res.cgi = false;
+            delete[] env;
+            delete[] argv;
+            Get(req, srv, res, *this, enf);
+            req.cgi = true;
+            return;
+        }
+        pid = fork();
+        if (pid == -1)
+        {
+            res.cgiProcessing = false;
+            res.returnCode = 500;
+            res.openErrorPage(srv);
+            res.formTheResponse(srv, req);
+            res.cgi = false;
+            enf = true;
+            delete[] env;
+            delete[] argv;
+            return;
+        }
+        if (pid == 0)
+        {
+            out = freopen((srv.root + "/cgi").c_str(), "w", stdout);
+            if (!out)
+                exit(EXIT_FAILURE);
+            if (res.Component.method == "POST")
+            {
+                in = freopen(res.postCgiFile.c_str(), "r", stdin);
+                if (!in)
+                    exit(EXIT_FAILURE);
+            }
+            execve(argv[0], argv, env);
+            exit(EXIT_FAILURE);
+        }
     }
-    if (res.clientPid == -1)
+    cgiPid = waitpid(pid, &status, WNOHANG);
+    end = clock();
+    if ((end - start) / CLOCKS_PER_SEC > 3 || cgiPid == -1)
     {
         res.cgiProcessing = false;
+        executed = false;
+        kill(pid, SIGKILL);
+        waitpid(pid, &status, 0);
         res.returnCode = 500;
         res.openErrorPage(srv);
         res.formTheResponse(srv, req);
-        delete[] env;
-        delete[] argv;
+        enf = true;
+        res.cgi = false;
         return;
     }
-    if (res.clientPid == 0)
-        res.cgiProcessing = true;
-    else
+    if (cgiPid == pid)
     {
-        res.cgiProcessing = false;
-        // fclose(stdout);
-        if (res.Component.method == "POST")
-            fclose(stdin);
         delete[] env;
-        delete[] argv; 
+        delete[] argv;
+        executed = false;
         res.returnCode = 200;
         res.cgi = true;
         res.file = srv.root + "/cgi";
-        std::cout << "cgi is done\n";
+        res.cgiProcessing = false;
+        enf = true;
         return;
+    }
+    if (cgiPid == 0)
+    {
+        res.cgiProcessing = true;
+            res.cgi = false;
     }
 }

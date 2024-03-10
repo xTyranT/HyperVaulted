@@ -1,5 +1,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Client.hpp"
+#include "../includes/Cgi.hpp"
 #define MAX_EVENTS 10
 
 void    accept_connection( int efd , int fd, std::map<int , class Client> & Clients )
@@ -29,8 +30,6 @@ void    accept_connection( int efd , int fd, std::map<int , class Client> & Clie
 void    multiplexing( std::vector<Server> & sv )
 {
     char buff[1024];
-    pid_t cgiPid;
-    int status;
     struct epoll_event ev, events[MAX_EVENTS];
     std::vector<int> sfds;
     std::map<int, class Client> Clients;
@@ -110,69 +109,59 @@ void    multiplexing( std::vector<Server> & sv )
                         Post( Clients[fd] , buff , rd, sv[Clients[fd].reqRes.sindx]);
                 }
                 else if ( Clients[fd].reqRes.Component.method != "POST" && Clients[fd].read )
-                    Clients[fd].enf = true;
+                {
+                    if (Clients[fd].reqRes.Component.method == "GET")
+                        Get(Clients[fd].reqRes.matchedLocation, sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes, Clients[fd].cgi, Clients[fd].enf);
+                    else if (Clients[fd].reqRes.Component.method == "DELETE")
+                        Delete(Clients[fd].reqRes.matchedLocation, sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes);
+                    if (!Clients[fd].reqRes.matchedLocation.cgi)
+                        Clients[fd].enf = true;
+                }
             }
             else if ( events[i].events & EPOLLOUT && Clients[fd].enf) 
             {
                 Clients[fd].start = clock();
-                if (Clients[fd].reqRes.matchedLocation.cgi && Clients[fd].reqRes.Component.method != "DELETE")
+                if( !Clients[fd].resred )
                 {
-                    std::cout << "cgi" << std::endl;
-                    cgiPid = waitpid(Clients[fd].reqRes.clientPid, &status, WNOHANG);
-                    if (cgiPid == -1)
-                    {
-                        Clients[fd].reqRes.cgiProcessing = false;
-                        Clients[fd].reqRes.returnCode = 500;
-                        Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
-                        Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
-                        close(fd);
-                        Clients.erase(fd);
-                    }
-                    if (cgiPid == 0)
-                        Clients[fd].reqRes.cgiProcessing = true;
+                    Clients[fd].resred = true;
+                    Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
+                    write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
+                    memset(buff, 0 , 1024);
+                    Clients[fd].resFile.read(buff , 1023);
+                    write(fd, buff, Clients[fd].resFile.gcount());
                 }
-                else
+                else{
+                    memset(buff, 0 , 1024);
+                    Clients[fd].resFile.read(buff , 1023);
+                    write(fd, buff, Clients[fd].resFile.gcount());
+                }
+                if ( Clients[fd].resFile.eof())
                 {
-                    Clients[fd].reqRes.cgiProcessing = false;
-                    if( !Clients[fd].resred )
-                    {
-                        Clients[fd].resred = true;
-                        Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
-                        if ( !Clients[fd].resFile.is_open() )
-                        {
-                            std::cout << "open " << strerror(errno) << std::endl;
-                            exit(EXIT_FAILURE);
-                        }
-                        std::cout << "file : " << Clients[fd].reqRes.file << std::endl;
-                        write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
-                        std::cout << " start "<<Clients[fd].reqRes.responseBuffer << "end"<< std::endl;
-                        memset(buff, 0 , 1024);
-                        Clients[fd].resFile.read(buff , 1023);
-                        write(fd, buff, Clients[fd].resFile.gcount());
-                    }
-                    else{
-                        memset(buff, 0 , 1024);
-                        Clients[fd].resFile.read(buff , 1023);
-                        write(fd, buff, Clients[fd].resFile.gcount());
-                    }
-                    if ( Clients[fd].resFile.eof())
-                    {
-                        epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL);
-                        close(fd);
-                        Clients[fd].requestclosed = true;
-                        Clients.erase(fd);
-                    }
+                    epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL);
+                    close(fd);
+                    Clients[fd].requestclosed = true;
+                    Clients.erase(fd);
                 }
             }
-            if ( Clients.find(fd) != Clients.end())
+            else if (Clients[fd].reqRes.cgiProcessing)
+            {
+                Clients[fd].cgi.cgiCaller(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation, Clients[fd].reqRes, Clients[fd].enf);
+                if (Clients[fd].reqRes.cgiProcessing == false && Clients[fd].reqRes.cgi == true)
+                    Clients[fd].cgi.formCgiResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation, Clients[fd].reqRes);
+            }
+            if ( Clients.find(fd) != Clients.end() )
             {
                 Clients[fd].end = clock();
                 if ( !Clients[fd].enf  && (double)(Clients[fd].end - Clients[fd].start) / CLOCKS_PER_SEC  > 5 )
                 {
-                    std::cout << "timeout" << std::endl;
                     Clients[fd].enf = true;
                     Clients[fd].reqRes.returnCode = 408;
-                    std::cout << "fd" << fd << std::endl;
+                    for(std::vector<Server>::iterator i = sv.begin(); i != sv.end(); i++)
+                    {
+                        if (fd == i->fd)
+                            break;
+                        Clients[fd].reqRes.sindx++;
+                    }
                     Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
                     Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
                 }

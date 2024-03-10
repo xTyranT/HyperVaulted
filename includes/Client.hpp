@@ -2,7 +2,8 @@
 #pragma once
 
 #include "webserv.hpp"
-#include "../includes/Response.hpp"
+#include "Response.hpp"
+#include "Cgi.hpp"
 
 class   Client
 {   
@@ -22,6 +23,7 @@ class   Client
         std::ofstream postFile;
         std::ifstream resFile;
         Response reqRes;
+        Cgi cgi;
 
         bool read;
         bool flag;

@@ -10,7 +10,6 @@ class Response : public Request
         bool cgi;
         bool cgiProcessing;
 
-        
         Response();
         Response(const Response& other);
         const Response& operator=(const Response& other);
@@ -19,10 +18,11 @@ class Response : public Request
         void formTheResponse(Server& srv, Location& req);
         void listDirFiles(std::string path);
         void formChunkedResponse(Location& req, Server& srv);
-        void getMethod(Location& req, Server& srv);
         void openErrorPage(Server& srv);
-        void deleteMethod(Location& req, Server& srv);
         void deleteDirectory(std::string path, Location& req, Server& srv);
 };
 
 std::string determineFileExtension(std::string fileName);
+std::string directoryHasIndex(std::string path, Location& req);
+bool isDirectory(std::string path);
+bool validPath(std::string path);

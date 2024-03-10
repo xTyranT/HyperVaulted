@@ -53,7 +53,9 @@ class Server
 
 std::vector<Server> getAvailableServers(std::ifstream& file);
 std::vector<Server> getDefaultServer(void);
-void    multiplexing( std::vector<Server> & sv );
-void    Post( class Client & Clients , char *buff , int rd , Server & srv);
+void multiplexing( std::vector<Server> & sv );
+void Post( class Client & Clients , char *buff , int rd , Server & srv);
+void Get(Location& req, Server& srv, class Response& res, class Cgi& cgiObj, bool& enf);
+void Delete(Location& req, Server& srv, Response& res);
 void fillMimeTypes(void);
 

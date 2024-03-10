@@ -28,6 +28,8 @@ Response::Response() : Request()
     responseBuffer = std::string();
     cgi = false;
     cgiProcessing = false;
+    clientPid = -2;
+    postCgiFile = std::string();
 }
 
 Response::Response(const Response& other) : Request(other)
@@ -113,6 +115,7 @@ void Response::listDirFiles(std::string path)
 
 void Response::formChunkedResponse(Location& req, Server& srv)
 {
+    responseBuffer = "";
     std::string fullPath = req.root + Component.path;
     std::ifstream openedFile(fullPath.c_str());
     if (!openedFile.is_open())
@@ -126,115 +129,15 @@ void Response::formChunkedResponse(Location& req, Server& srv)
     responseBuffer.append(to_string(returnCode) + " ");
     responseBuffer.append(errorPageMessage() + "\r\n");
     responseBuffer.append("Content-Type: ");
-    responseBuffer.append(determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1)));
+    std::string extension = determineFileExtension(Component.path.substr(Component.path.rfind('/') + 1));
+    if (extension.empty())
+        responseBuffer.append("text/html");
+    else
+        responseBuffer.append(extension);
     struct stat fileStat;
     stat(fullPath.c_str(), &fileStat);
     responseBuffer.append("\r\nContent Length: " + to_string(fileStat.st_size) + "\r\n\r\n");
     file = fullPath;
-}
-
-void Response::getMethod(Location& req, Server& srv)
-{
-    std::string fullPath = req.root + Component.path.substr(0, Component.path.rfind('/'));
-    DIR* directory = NULL;
-    directory = opendir(fullPath.c_str());
-    if (!directory)
-    {
-        closedir(directory);
-        returnCode = 404;
-        openErrorPage(srv);
-        formTheResponse(srv, req);
-        return;
-    }
-    else
-    {
-        if (isDirectory(req.root + Component.path))
-        {
-            if (Component.path[Component.path.size() - 1] != '/')
-            {
-                returnCode = 301;
-                Component.path.append("/");
-                getMethod(req, srv);
-                return;
-            }
-            if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == true)
-            {
-                returnCode = 200;
-                listDirFiles(req.root + Component.path);
-                return;
-            }
-            else if (directoryHasIndex(req.root + Component.path, req).empty() && req.autoIndex == false)
-            {
-                returnCode = 403;
-                openErrorPage(srv);
-                formTheResponse(srv, req);
-                return;
-            }
-            else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == false)
-            {
-                returnCode = 200;
-                Component.path.append(directoryHasIndex(req.root + Component.path, req));
-                formChunkedResponse(req, srv);
-                return;
-            }
-            else if (!directoryHasIndex(req.root + Component.path, req).empty() && req.cgi == true)
-            {
-                Cgi cgi;
-                cgi.cgiCaller(srv, req, *this);
-                if (returnCode != 200)
-                {
-                    openErrorPage(srv);
-                    formTheResponse(srv, req);
-                    return;
-                }
-                cgi.formCgiResponse(srv, req, *this);
-                return;
-            }
-        }
-        if (req.cgi == false)
-        {
-            struct stat fileStat;
-            stat((req.root + Component.path).c_str(), &fileStat);
-            if (fileStat.st_mode & S_IFDIR)
-            {
-                returnCode = 404;
-                openErrorPage(srv);
-                formTheResponse(srv, req);
-                return;
-            }
-            else
-            {
-                std::ifstream file((req.root + Component.path).c_str());
-                if (!file.is_open())
-                {
-                    returnCode = 404;
-                    openErrorPage(srv);
-                    formTheResponse(srv, req);
-                    return;
-                }
-                else
-                {
-                    returnCode = 200;
-                    formChunkedResponse(req, srv);
-                    return;
-                }
-            }
-        }
-        else if (req.cgi == true)
-        {
-            std::cout << "CGI" << std::endl;
-            Cgi cgi;
-            cgi.cgiCaller(srv, req, *this);
-            if (returnCode != 200)
-            {
-                openErrorPage(srv);
-                formTheResponse(srv, req);
-                return;
-            }
-            cgi.formCgiResponse(srv, req, *this);
-            return;
-        }
-    }
 }
 
 void Response::openErrorPage(Server& srv)
@@ -265,120 +168,6 @@ void Response::openErrorPage(Server& srv)
     }
 }
 
-bool emptyDirectory(std::string path)
-{
-    DIR* directory = opendir(path.c_str());
-    struct dirent* entry;
-    while ((entry = readdir(directory)) != NULL)
-    {
-        if (entry->d_name[0] == '.')
-            continue;
-        closedir(directory);
-        return false;
-    }
-    closedir(directory);
-    return true;
-}
-
-void Response::deleteDirectory(std::string path, Location& req, Server& srv)
-{
-    DIR* directory = opendir(path.c_str());
-    struct dirent* entry;
-    while ((entry = readdir(directory)) != NULL)
-    {
-        if (entry->d_name[0] == '.')
-            continue;
-        if (isDirectory(path + "/" + entry->d_name))
-        {
-            deleteDirectory(path + "/" + entry->d_name, req, srv);
-            if (!emptyDirectory(path + "/" + entry->d_name))
-            {
-                returnCode = 403;
-                openErrorPage(srv);
-                formTheResponse(srv, req);
-                return;
-            }
-            rmdir((path + "/" + entry->d_name).c_str());
-            returnCode = 204;
-            openErrorPage(srv);
-            formTheResponse(srv, req);
-            closedir(directory);
-            return;
-        }
-        else
-        {
-            if (remove((path + "/" + entry->d_name).c_str()) == -1)
-            {
-                returnCode = 403;
-                openErrorPage(srv);
-                formTheResponse(srv, req);
-                return;
-            }
-            returnCode = 204;
-            openErrorPage(srv);
-            formTheResponse(srv, req);
-            closedir(directory);
-            return;
-        }
-    }
-    closedir(directory);
-}
-
-void Response::deleteMethod(Location& req, Server& srv)
-{
-    std::string fullPath = req.root + Component.path;
-    if (!validPath(fullPath))
-    {
-        std::cout << "Invalid path" << std::endl;
-        returnCode = 404;
-        openErrorPage(srv);
-        formTheResponse(srv, req);
-        return;
-    }
-    char *path = realpath(fullPath.c_str(), NULL);
-    std::string realPath = path;
-    char *root = realpath(srv.root.c_str(), NULL);
-    std::string rootPath = root;
-    if (realPath.compare(0, rootPath.size(), rootPath) != 0)
-    {
-        std::cout << "Forbidden" << std::endl;
-        returnCode = 403;
-        openErrorPage(srv);
-        formTheResponse(srv, req);
-        return;
-    }
-    if (isDirectory(fullPath))
-    {
-        std::cout << "Directory" << std::endl;
-        if (Component.path[Component.path.size() - 1] != '/')
-        {
-            returnCode = 409;
-            openErrorPage(srv);
-            formTheResponse(srv, req);
-            return;
-        }
-        else
-        {
-            deleteDirectory(fullPath, req, srv);
-            returnCode = 204;
-        }
-    }
-    else
-    {
-        std::cout << "File" << std::endl;
-        if (remove(fullPath.c_str()) == -1)
-        {
-            std::cout << strerror(errno) << std::endl;
-            returnCode = 403;
-            openErrorPage(srv);
-            formTheResponse(srv, req);
-            return;
-        }
-        returnCode = 204;
-        openErrorPage(srv);
-        formTheResponse(srv, req);
-    }
-}
 
 void Response::formTheResponse(Server& srv, Location& req)
 {

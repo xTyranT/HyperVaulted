@@ -31,7 +31,9 @@ Request::Request(void)
     httpHeaders = std::map<std::string, std::string>();
     returnCode = -1;
     sFd = -1;
-
+    sindx = -1;
+    file = std::string();
+    responseBuffer = std::string();
 }
 
 Request::Request(const Request& other)
@@ -46,6 +48,9 @@ const Request& Request::operator=(const Request& other)
     returnCode = other.returnCode;
     sFd = other.sFd;
     sindx = other.sindx;
+    file = other.file;
+    responseBuffer = other.responseBuffer;
+    matchedLocation = other.matchedLocation;
     return *this;
 }
 
@@ -68,8 +73,8 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 411;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    // if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
-    //     return 400;
+    if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
+        return 400;
     i =  httpHeaders.find("Content-Type");
     if ( i != httpHeaders.end() && i->second.find("multipart/form-data") != std::string::npos)
         return 501;
@@ -234,7 +239,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
     Location match;
     try
     {
-        // checkAllowdUriCharacters(Component.path);
         match = matchURIWithLocation(srv, Component.path);
         matchedLocation = match;
         if (!match.ret.empty())
@@ -254,21 +258,6 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
                 Response& res = static_cast<Response&>(*this);
                 res.openErrorPage(srv[whichServer]);
                 res.formTheResponse(srv[whichServer], match);
-            }
-            else
-            {
-                Response& res = static_cast<Response&>(*this);
-                if (Component.method == "GET")
-                    res.getMethod(match, srv[whichServer]);
-                else if (Component.method == "DELETE")
-                    res.deleteMethod(match, srv[whichServer]);
-                else if (Component.method == "POST" && match.upload == false)
-                {
-                    returnCode = 409;
-                    res.openErrorPage(srv[whichServer]);
-                    res.formTheResponse(srv[whichServer], match);
-                    return;
-                }
                 return;
             }
         }
@@ -286,6 +275,7 @@ void Request::matchLocation(std::vector<Server>& srv, int whichServer)
 
 void Request::requestParser(std::string &request, std::vector<Server>& srv)
 {
+    std::cout << "request: " << request << std::endl;
     int whichServer = 0;
     for(std::vector<Server>::iterator i = srv.begin(); i != srv.end(); i++)
     {

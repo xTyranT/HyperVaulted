@@ -56,7 +56,6 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
 
         if (Clients.postFile.fail())
         {
-            std::cout<< "open " << fname << std::endl;
             Clients.reqRes.returnCode = 500;
             Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
             Clients.enf = true;
@@ -96,7 +95,7 @@ void    ChunkedPost( Client & Clients , char *buff , int rd , Server & srv)
         if ( Clients.reqRes.matchedLocation.cgi )
         {
             Cgi postCgi;
-            postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+            postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes, Clients.enf);
             if (Clients.reqRes.returnCode == 200)
                 postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
         }
@@ -149,15 +148,13 @@ void    Post( Client & Clients , char *buff , int rd , Server & srv)
             Clients.enf = true;
             if ( Clients.reqRes.matchedLocation.cgi )
             {
-                std::cout << "cgi" << std::endl;
                 Cgi postCgi;
-                postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
+                postCgi.cgiCaller(srv, Clients.reqRes.matchedLocation, Clients.reqRes, Clients.enf);
                 if (Clients.reqRes.returnCode == 200)
                     postCgi.formCgiResponse(srv, Clients.reqRes.matchedLocation, Clients.reqRes);
             }
             if (!Clients.reqRes.cgi)
             {
-                std::cout << "no cgi" << std::endl;
                 Clients.reqRes.returnCode = 201;
                 Clients.reqRes.openErrorPage(srv);
                 Clients.reqRes.formTheResponse(srv, Clients.reqRes.matchedLocation);
