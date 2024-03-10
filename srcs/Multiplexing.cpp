@@ -76,14 +76,11 @@ void    multiplexing( std::vector<Server> & sv )
                 accept_connection( efd , fd , Clients);
             else if (((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) ))
                         close(events[i].data.fd);
-            else if ( events[i].events & EPOLLIN )
+            else if ( events[i].events & EPOLLIN && !Clients[fd].enf )
             {
-        
                 Clients[fd].start = clock();
                 memset(buff, 0 , 1024);
                 int rd = recv(fd, buff, 1023, 0);
-                if (!Clients[fd].flag)
-                    Clients[fd].sread = 0;
                 Clients[fd].sread += rd;
                 if ( rd == -1 )
                 {
@@ -91,6 +88,8 @@ void    multiplexing( std::vector<Server> & sv )
                     exit(EXIT_FAILURE);
                 }
                 if ( !Clients[fd].read ){
+                    Clients[fd].start = clock();
+
                     Clients[fd].request.append(buff, rd);
                     size_t find = Clients[fd].request.find("\r\n\r\n");
                     if ( find != std::string::npos && !Clients[fd].read )
@@ -117,7 +116,6 @@ void    multiplexing( std::vector<Server> & sv )
                 Clients[fd].start = clock();
                 if (Clients[fd].reqRes.matchedLocation.cgi && Clients[fd].reqRes.Component.method != "DELETE")
                 {
-                    std::cout << "cgi" << std::endl;
                     cgiPid = waitpid(Clients[fd].reqRes.clientPid, &status, WNOHANG);
                     if (cgiPid == -1)
                     {
@@ -140,12 +138,9 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].resFile.open(Clients[fd].reqRes.file.c_str());
                         if ( !Clients[fd].resFile.is_open() )
                         {
-                            std::cout << "open " << strerror(errno) << std::endl;
                             exit(EXIT_FAILURE);
                         }
-                        std::cout << "file : " << Clients[fd].reqRes.file << std::endl;
                         write(fd, Clients[fd].reqRes.responseBuffer.c_str() , Clients[fd].reqRes.responseBuffer.size());
-                        std::cout << " start "<<Clients[fd].reqRes.responseBuffer << "end"<< std::endl;
                         memset(buff, 0 , 1024);
                         Clients[fd].resFile.read(buff , 1023);
                         write(fd, buff, Clients[fd].resFile.gcount());
@@ -155,7 +150,7 @@ void    multiplexing( std::vector<Server> & sv )
                         Clients[fd].resFile.read(buff , 1023);
                         write(fd, buff, Clients[fd].resFile.gcount());
                     }
-                    if ( Clients[fd].resFile.eof())
+                    if ( Clients[fd].resFile.eof() )
                     {
                         epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL);
                         close(fd);
@@ -167,12 +162,10 @@ void    multiplexing( std::vector<Server> & sv )
             if ( Clients.find(fd) != Clients.end())
             {
                 Clients[fd].end = clock();
-                if ( !Clients[fd].enf  && (double)(Clients[fd].end - Clients[fd].start) / CLOCKS_PER_SEC  > 5 )
+                if ( !Clients[fd].enf  && (double)(Clients[fd].end - Clients[fd].start) / CLOCKS_PER_SEC  > 30 )
                 {
-                    std::cout << "timeout" << std::endl;
                     Clients[fd].enf = true;
                     Clients[fd].reqRes.returnCode = 408;
-                    std::cout << "fd" << fd << std::endl;
                     Clients[fd].reqRes.openErrorPage(sv[Clients[fd].reqRes.sindx]);
                     Clients[fd].reqRes.formTheResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation);
                 }

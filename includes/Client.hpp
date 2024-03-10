@@ -9,9 +9,9 @@ class   Client
     public:
         int sfd;
         int fd;
-        long long chunksize;
-        long long contentlength;
-        long long sread;
+        size_t chunksize;
+        size_t contentlength;
+        size_t sread;
         clock_t start;
         clock_t end;
         std::string postpath;

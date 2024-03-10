@@ -26,3 +26,4 @@ class Response : public Request
 };
 
 std::string determineFileExtension(std::string fileName);
+bool validPath(std::string path);

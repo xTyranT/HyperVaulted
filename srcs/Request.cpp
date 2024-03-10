@@ -61,6 +61,7 @@ bool Request::pathURIChecker(std::string& URI)
 
 int Request::valueChecker(std::vector<Server>& srv)
 {
+    // Location without POST return 401
     std::map<std::string, std::string>::iterator i = httpHeaders.find("Transfer-Encoding");
     if (i != httpHeaders.end() && i->second != "chunked")
         return 501;
@@ -68,8 +69,8 @@ int Request::valueChecker(std::vector<Server>& srv)
         return 411;
     if (Component.method != "POST" && Component.method != "DELETE" && Component.method != "GET")
         return 501;
-    // if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
-    //     return 400;
+    if ( httpHeaders.find("Content-Type") == httpHeaders.end() && Component.method == "POST")
+        return 400;
     i =  httpHeaders.find("Content-Type");
     if ( i != httpHeaders.end() && i->second.find("multipart/form-data") != std::string::npos)
         return 501;
