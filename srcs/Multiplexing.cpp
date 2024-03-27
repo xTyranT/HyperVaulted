@@ -186,7 +186,7 @@ void    multiplexing( std::vector<Server> & sv )
             }
             else if (Clients[fd].reqRes.cgiProcessing ) {
                 Clients[fd].cgi.cgiCaller(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation, Clients[fd].reqRes, Clients[fd].enf);
-                if (Clients[fd].cgi.pid == Clients[fd].cgi.cgiPid)
+                if (Clients[fd].cgi.cgiPid == Clients[fd].cgi.pid && WEXITSTATUS(Clients[fd].cgi.status) != EXIT_NO_CGI && WEXITSTATUS(Clients[fd].cgi.status) != EXIT_NOT_FOUND)
                     Clients[fd].cgi.formCgiResponse(sv[Clients[fd].reqRes.sindx], Clients[fd].reqRes.matchedLocation, Clients[fd].reqRes);
                 if (Clients[fd].reqRes.Component.method == "POST" && WEXITSTATUS(Clients[fd].cgi.status) == EXIT_NO_CGI)
                 {

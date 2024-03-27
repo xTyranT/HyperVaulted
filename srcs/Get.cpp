@@ -82,8 +82,10 @@ void Get(Location& req, Server& srv, Response& res, Cgi& cgiObj, bool& enf)
         {
             res.Component.realPath.append(directoryHasIndex(res.Component.realPath, req));
             cgiObj.cgiCaller(srv, req, res, enf);
-            if (WEXITSTATUS(cgiObj.status) == EXIT_CGI_SUCCESS)
+            if (cgiObj.cgiPid == cgiObj.pid && WEXITSTATUS(cgiObj.status) != EXIT_NO_CGI && WEXITSTATUS(cgiObj.status) != EXIT_NOT_FOUND)
+            {
                 cgiObj.formCgiResponse(srv, req, res);
+            }
             return;
         }
     }
@@ -129,8 +131,10 @@ void Get(Location& req, Server& srv, Response& res, Cgi& cgiObj, bool& enf)
     else if (req.cgi == true)
     {
         cgiObj.cgiCaller(srv, req, res, enf);
-        if (cgiObj.cgiPid == cgiObj.pid)
+        if (cgiObj.cgiPid == cgiObj.pid && WEXITSTATUS(cgiObj.status) != EXIT_NO_CGI && WEXITSTATUS(cgiObj.status) != EXIT_NOT_FOUND)
+        {
             cgiObj.formCgiResponse(srv, req, res);
+        }
         return;
     }
 }

@@ -83,8 +83,6 @@ void Delete(Location& req, Server& srv, Response& res, bool& enf)
     std::string rRoot = root;
     if (rPath.find(root) == std::string::npos)
     {
-        std::cout << "Forbidden\n   ";
-        std::cout << "path: " << rPath << std::endl;
         res.returnCode = 403;
         res.openErrorPage(srv);
         res.formTheResponse(srv, req);
